@@ -1,0 +1,36 @@
+---
+description: Next.js App Router patterns and conventions
+globs: "app/**/*.{ts,tsx}, src/app/**/*.{ts,tsx}"
+alwaysApply: false
+---
+
+# Next.js Patterns
+
+- Server Components and Server Actions are the default for ALL data fetching and mutations
+- NEVER use the `pages/` directory — App Router only
+- No tRPC, no GraphQL, no REST API layer — Server Actions handle mutations, Server Components handle reads
+- Co-locate files: keep components, actions, and types near the feature they serve
+- Mark files `"use client"` only when using Mantine hooks or browser APIs
+
+## File Structure
+
+```
+app/
+  (consultant)/        # Consultant Command Center routes
+  (supplier)/          # Supplier Portal routes
+  api/
+    auth/              # Better-Auth handler
+    inngest/           # Inngest webhook handler
+```
+
+## Route Groups
+
+- `(consultant)` — Authenticated dashboard, verification workspace, export manager
+- `(supplier)` — Anonymous Magic Link pages: dropzone, scorecard
+
+## Server Actions
+
+- Define mutations as Server Actions in co-located `actions.ts` files
+- Use `"use server"` at the top of action files
+- Always validate input with Zod before performing mutations
+- Return typed results, not raw database objects

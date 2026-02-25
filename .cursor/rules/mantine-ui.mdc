@@ -1,0 +1,40 @@
+---
+description: Mantine v8 UI component rules — no Tailwind
+globs: "**/*.tsx"
+alwaysApply: false
+---
+
+# Mantine v8 UI Rules
+
+Mantine is the ONLY UI library. No Tailwind. No shadcn. No Radix.
+
+## Components
+
+Use Mantine components exclusively:
+- Layout: `Stack`, `Group`, `Box`, `Grid`, `Flex`, `Container`, `SimpleGrid`
+- Typography: `Text`, `Title`, `Anchor`, `Highlight`
+- Inputs: `TextInput`, `NumberInput`, `Select`, `Textarea`, `FileInput`
+- Feedback: `Notification`, `Alert`, `Progress`, `Loader`, `Skeleton`
+- Overlay: `Modal`, `Drawer`, `Popover`, `Tooltip`, `Menu`
+- Data: `Table`, `Badge`, `Card`, `Timeline`
+- File upload: `Dropzone` from `@mantine/dropzone`
+
+## Hooks
+
+Use Mantine hooks instead of building your own:
+- `useForm` for form state and validation
+- `useDisclosure` for open/close state (modals, drawers)
+- `useDebouncedValue` for search inputs
+- `useMediaQuery` for responsive logic
+
+## Styling
+
+- NEVER write `className="flex"` or any Tailwind utility class
+- Use Mantine's `style` prop for one-off styles
+- Use CSS Modules (`*.module.css`) for complex/reusable styles
+- Use Mantine's theme tokens for colors, spacing, and typography
+
+## Client Directives
+
+- Add `"use client"` only when the component uses Mantine hooks or browser APIs
+- Server Components should remain the default

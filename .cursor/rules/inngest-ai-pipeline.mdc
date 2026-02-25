@@ -1,0 +1,30 @@
+---
+description: Inngest background jobs and AI extraction pipeline
+globs: "inngest/**, app/api/inngest/**"
+alwaysApply: false
+---
+
+# Inngest & AI Pipeline Rules
+
+## Inngest Conventions
+
+- All AI extraction jobs run through Inngest — never call Gemini/Claude directly from a Server Action if the operation could exceed 60 seconds
+- Event naming convention: `elmi/<resource>.<action>` (e.g., `elmi/document.uploaded`, `elmi/extraction.completed`, `elmi/validation.completed`)
+- Each Inngest function handles ONE pipeline step — no monolithic extraction functions
+- Inngest client config lives in `inngest/client.ts`
+- Inngest functions live in `inngest/functions/`
+
+## AI Extraction Pipeline
+
+Two-stage, cross-provider validation:
+
+1. **Stage 1 — Extraction (Gemini 2.5 Flash):** PDF → images → structured JSON with per-field confidence scores
+2. **Stage 2 — Validation (Claude Sonnet):** Original image + Stage 1 JSON → validation report flagging discrepancies
+3. **Stage 3 — Review:** Consultant split-screen review in the Verification Workspace
+
+## AI SDK Usage
+
+- Both model calls go through the Vercel AI SDK (`ai` package)
+- Model identifiers are environment variables (`GEMINI_API_KEY`, `ANTHROPIC_API_KEY`) — never hardcoded
+- Use structured output (Zod schemas) for extraction results
+- Always include confidence scores per extracted field

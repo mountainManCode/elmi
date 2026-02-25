@@ -1,0 +1,14 @@
+---
+description: Google Cloud Storage file handling patterns
+globs: "lib/gcs.ts, **/*storage*, **/*upload*"
+alwaysApply: false
+---
+
+# Google Cloud Storage Rules
+
+- Raw PDFs stored in GCS — never in Postgres
+- Use signed URLs (short TTL) for serving PDFs in the verification workspace — never proxy through the app server
+- File path convention: `{orgId}/{projectId}/{supplierId}/{documentId}/{filename}`
+- GCS utilities live in `lib/gcs.ts`
+- Bucket name comes from `GCS_BUCKET_NAME` environment variable
+- Project ID comes from `GOOGLE_CLOUD_PROJECT` environment variable

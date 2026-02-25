@@ -1,0 +1,26 @@
+---
+description: Better-Auth configuration and authentication patterns
+globs: "lib/auth.ts, app/api/auth/**, **/*auth*"
+alwaysApply: false
+---
+
+# Better-Auth Rules
+
+Better-Auth is the authentication layer. Self-hosted, data stored in our own Postgres.
+
+## Configuration
+
+- Auth config lives in `lib/auth.ts`
+- Use the ZenStack adapter (`@zenstackhq/better-auth`)
+- Organizations plugin is enabled — all consultant accounts belong to an org
+
+## Authentication Flows
+
+- **Consultants:** Standard email/password or OAuth via Better-Auth. Users belong to an organization.
+- **Suppliers:** Magic Links scoped to a single project/supplier pair. No account creation required. No dashboard access.
+
+## Security
+
+- Never store auth secrets in code — environment variables only (`BETTER_AUTH_SECRET`)
+- Session tokens must be validated server-side before any data access
+- Magic Link tokens should have short TTLs and be single-use

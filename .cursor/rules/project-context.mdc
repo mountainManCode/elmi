@@ -1,0 +1,40 @@
+---
+description: Core project context for Elmi — always active
+globs:
+alwaysApply: true
+---
+
+# Elmi — Project Context
+
+Elmi is a zero-friction Scope 3 data ingestion portal for boutique ESG consultants. Suppliers upload utility bills via anonymous Magic Links; AI extracts structured data; consultants verify and export to carbon calculators. We are NOT building a carbon calculator. We are middleware.
+
+## Stack (Non-Negotiable)
+
+| Layer | Technology |
+|---|---|
+| Framework | Next.js 16 (App Router) + React 19 |
+| UI | Mantine v8 — NO Tailwind, NO shadcn, NO other component libraries |
+| ORM + AuthZ | ZenStack v3 (Kysely engine) — schema in `schema.zmodel` |
+| Auth | Better-Auth (self-hosted, data in own Postgres) |
+| AI Ingestion | Gemini 2.5 Flash via Vercel AI SDK |
+| AI Validation | Claude Sonnet via Vercel AI SDK |
+| Background Jobs | Inngest |
+| Database | PostgreSQL on Google Cloud SQL |
+| File Storage | Google Cloud Storage (signed URLs for access) |
+| Hosting | Vercel (compute) + GCP (data) |
+
+## Multi-Tenant Data Model
+
+Two user types — keep them clearly separated:
+- **Consultants:** Authenticated Better-Auth users belonging to an org. Own projects and see their org's data only.
+- **Suppliers:** Anonymous Magic Link sessions. Can only upload to their specific assigned project. No dashboard access.
+
+## What NOT to Do
+
+- Do NOT suggest Tailwind, shadcn, Radix, or any non-Mantine UI solution
+- Do NOT suggest tRPC, GraphQL, or REST endpoints for internal data fetching
+- Do NOT suggest Prisma standalone (ZenStack wraps it)
+- Do NOT suggest Clerk, Auth.js, or Supabase Auth (Better-Auth is decided)
+- Do NOT suggest AWS (we're on GCP)
+- Do NOT create API routes for things that can be Server Actions
+- Do NOT call AI models synchronously from Server Actions for multi-page documents
