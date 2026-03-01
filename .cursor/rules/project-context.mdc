@@ -14,10 +14,10 @@ Elmi is a zero-friction Scope 3 data ingestion portal for boutique ESG consultan
 |---|---|
 | Framework | Next.js 16 (App Router) + React 19 |
 | UI | Mantine v8 — NO Tailwind, NO shadcn, NO other component libraries |
-| ORM + AuthZ | ZenStack v3 (Kysely engine) — schema in `schema.zmodel` |
+| ORM + AuthZ | ZenStack v3 (Kysely engine) — schema in `zenstack/schema.zmodel` |
 | Auth | Better-Auth (self-hosted, data in own Postgres) |
-| AI Ingestion | Gemini 2.5 Flash via Vercel AI SDK |
-| AI Validation | Claude Sonnet via Vercel AI SDK |
+| AI Ingestion | Vercel AI SDK — model TBD (Gemini 2.5 Flash, GPT-4o mini, Claude Haiku all candidates) |
+| AI Validation | Vercel AI SDK — model TBD (Claude Sonnet, GPT-4o mini, Gemini Flash all candidates) |
 | Background Jobs | Inngest |
 | Database | PostgreSQL on Google Cloud SQL |
 | File Storage | Google Cloud Storage (signed URLs for access) |

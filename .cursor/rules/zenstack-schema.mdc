@@ -1,19 +1,20 @@
 ---
 description: ZenStack v3 data modeling and access control rules
-globs: "schema.zmodel, lib/db.ts, prisma/**"
+globs: "zenstack/schema.zmodel, lib/db.ts"
 alwaysApply: false
 ---
 
 # ZenStack v3 Rules
 
-ZenStack wraps Prisma and adds access control policies directly in the schema. The schema file `schema.zmodel` is the single source of truth.
+ZenStack v3 uses its own Kysely-based ORM engine (no Prisma). The schema file `zenstack/schema.zmodel` is the single source of truth.
 
 ## Schema Rules
 
-- ALL models defined in `schema.zmodel` — never create raw Prisma `.prisma` files
+- ALL models defined in `zenstack/schema.zmodel` — never create raw Prisma `.prisma` files
 - Every model MUST have explicit `@@allow` and `@@deny` policies — no model ships without access control
-- Run `npx zenstack generate` after every `schema.zmodel` change, then run migrations
+- Run `npx zenstack generate` after every `zenstack/schema.zmodel` change, then run migrations
 - Do NOT install or import `@prisma/client` directly — use ZenStack's generated client from `lib/db.ts`
+- Do NOT add a `generator client { provider = "prisma-client-js" }` block — v3 does not use Prisma Client codegen
 
 ## Multi-Tenant Isolation
 
@@ -23,6 +24,6 @@ ZenStack wraps Prisma and adds access control policies directly in the schema. T
 
 ## Enhanced Client
 
-- Import the enhanced Prisma client from `lib/db.ts`
+- Import the ZenStack enhanced client from `lib/db.ts`
 - The enhanced client automatically applies access policies based on the current user context
 - Always pass the auth context when creating the enhanced client

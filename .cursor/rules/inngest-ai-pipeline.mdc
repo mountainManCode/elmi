@@ -18,13 +18,19 @@ alwaysApply: false
 
 Two-stage, cross-provider validation:
 
-1. **Stage 1 — Extraction (Gemini 2.5 Flash):** PDF → images → structured JSON with per-field confidence scores
-2. **Stage 2 — Validation (Claude Sonnet):** Original image + Stage 1 JSON → validation report flagging discrepancies
+1. **Stage 1 — Extraction:** PDF → images → structured JSON with per-field confidence scores
+2. **Stage 2 — Validation:** Original image + Stage 1 JSON → validation report flagging discrepancies
 3. **Stage 3 — Review:** Consultant split-screen review in the Verification Workspace
+
+> **Model selection is NOT final — evaluate before committing.**
+> Stage 1 candidates: Gemini 2.5 Flash, GPT-4o mini, Claude Haiku
+> Stage 2 candidates: Claude Sonnet, GPT-4o mini, Gemini Flash
+> The Vercel AI SDK makes swapping providers trivial — keep model IDs in env vars.
 
 ## AI SDK Usage
 
 - Both model calls go through the Vercel AI SDK (`ai` package)
-- Model identifiers are environment variables (`GEMINI_API_KEY`, `ANTHROPIC_API_KEY`) — never hardcoded
+- Model identifiers are environment variables — never hardcoded in source
+- Supported env vars: `GEMINI_API_KEY`, `ANTHROPIC_API_KEY`, `OPENAI_API_KEY`
 - Use structured output (Zod schemas) for extraction results
 - Always include confidence scores per extracted field

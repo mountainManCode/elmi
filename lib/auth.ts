@@ -1,13 +1,17 @@
 // Better-Auth configuration
 // Docs: https://better-auth.com
+//
+// Uses the ZenStack adapter — auth tables are managed by Better-Auth
+// directly on the raw `db` client (no access policies applied).
+// Run `npx @better-auth/cli generate` after changing plugins to sync the schema.
 
 import { betterAuth } from "better-auth";
-import { prismaAdapter } from "better-auth/adapters/prisma";
+import { zenstackAdapter } from "@zenstackhq/better-auth";
 import { organization, magicLink } from "better-auth/plugins";
-import { prisma } from "@/lib/db";
+import { db } from "@/lib/db";
 
 export const auth = betterAuth({
-  database: prismaAdapter(prisma, { provider: "postgresql" }),
+  database: zenstackAdapter(db, { provider: "postgresql" }),
   secret: process.env.BETTER_AUTH_SECRET,
   plugins: [
     organization(),
