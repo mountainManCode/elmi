@@ -10,7 +10,7 @@ import { ZenStackClient } from "@zenstackhq/orm";
 import { PostgresDialect } from "@zenstackhq/orm/dialects/postgres";
 import { PolicyPlugin } from "@zenstackhq/plugin-policy";
 import { schema } from "@/zenstack/schema";
-import { Pool } from "pg";
+import { Pool } from "@neondatabase/serverless";
 import { headers } from "next/headers";
 
 // ---------------------------------------------------------------------------

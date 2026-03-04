@@ -39,3 +39,8 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# zenstack generated files (rebuilt by `npx zenstack generate`)
+zenstack/schema.ts
+zenstack/models.ts
+zenstack/input.ts

@@ -15,6 +15,8 @@ ZenStack v3 uses its own Kysely-based ORM engine (no Prisma). The schema file `z
 - Run `npx zenstack generate` after every `zenstack/schema.zmodel` change, then run migrations
 - Do NOT install or import `@prisma/client` directly — use ZenStack's generated client from `lib/db.ts`
 - Do NOT add a `generator client { provider = "prisma-client-js" }` block — v3 does not use Prisma Client codegen
+- Two plugin blocks are required: `plugin typescript { provider = "@core/typescript" }` and `plugin policy { provider = "@zenstackhq/plugin-policy" }` — do NOT use `@core/enhancer` (v2 only)
+- Generated files (`zenstack/schema.ts`, `zenstack/models.ts`, `zenstack/input.ts`) are auto-generated — never edit them manually
 
 ## Multi-Tenant Isolation
 
