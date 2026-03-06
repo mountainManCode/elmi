@@ -12,7 +12,8 @@
       "Bash(node:*)",
       "Bash(gcloud:*)",
       "Bash(xargs grep:*)",
-      "Bash(xargs:*)"
+      "Bash(xargs:*)",
+      "Bash(ls:*)"
     ]
   },
   "outputStyle": "Explanatory"

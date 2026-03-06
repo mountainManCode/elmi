@@ -130,10 +130,11 @@ model Organization {
   logo        String?
   createdAt   DateTime
   metadata    String?
-  members     Member[]
-  invitations Invitation[]
-  projects    Project[]
-  documents   Document[]
+  members       Member[]
+  invitations   Invitation[]
+  projects      Project[]
+  documents     Document[]
+  supplierLinks SupplierLink[]
 
   @@map('organization')
 
@@ -190,6 +191,34 @@ model Invitation {
 // DOMAIN MODELS
 // ---------------------------------------------------------------------------
 
+/// A shareable, time-limited upload link for a specific supplier.
+/// Consultants generate these from the dashboard; suppliers open the link
+/// in a browser and upload PDFs without signing in.
+model SupplierLink {
+  id             String       @id @default(cuid())
+  token          String       @unique @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  projectId      String
+  project        Project      @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  supplierId     String
+  expiresAt      DateTime
+  maxUploads     Int          @default(10)
+  uploadCount    Int          @default(0)
+  isActive       Boolean      @default(true)
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @default(now()) @updatedAt
+
+  @@map('supplier_link')
+
+  // Org members can read links in their organization.
+  @@allow('read', organization.members?[userId == auth().id])
+  // Owners and admins can create and update links.
+  @@allow('create,update', organization.members?[userId == auth().id && (role == 'owner' || role == 'admin')])
+  // Only owners can delete links.
+  @@allow('delete', organization.members?[userId == auth().id && role == 'owner'])
+}
+
 /// A Project groups related Documents within an Organization.
 /// Consultants create projects to organize supplier documents by engagement.
 model Project {
@@ -199,6 +228,7 @@ model Project {
   organizationId String
   organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   documents      Document[]
+  supplierLinks  SupplierLink[]
   createdAt      DateTime     @default(now())
   updatedAt      DateTime     @default(now()) @updatedAt
 
