@@ -132,6 +132,8 @@ model Organization {
   metadata    String?
   members     Member[]
   invitations Invitation[]
+  projects    Project[]
+  documents   Document[]
 
   @@map('organization')
 
@@ -185,5 +187,71 @@ model Invitation {
 }
 
 // ---------------------------------------------------------------------------
-// DOMAIN MODELS — add below
+// DOMAIN MODELS
 // ---------------------------------------------------------------------------
+
+/// A Project groups related Documents within an Organization.
+/// Consultants create projects to organize supplier documents by engagement.
+model Project {
+  id             String       @id @default(cuid())
+  name           String
+  description    String?
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  documents      Document[]
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @default(now()) @updatedAt
+
+  @@map('project')
+
+  // Org members can read projects in their organization.
+  @@allow('read', organization.members?[userId == auth().id])
+  // Owners and admins can create and update projects.
+  @@allow('create,update', organization.members?[userId == auth().id && (role == 'owner' || role == 'admin')])
+  // Only owners can delete projects.
+  @@allow('delete', organization.members?[userId == auth().id && role == 'owner'])
+}
+
+/// A Document represents an uploaded PDF (permit, utility bill, etc.).
+/// Tracks extraction pipeline status: pending → extracting → needs_review → approved.
+model Document {
+  id               String            @id @default(cuid())
+  fileName         String
+  gcsPath          String
+  status           String            @default("pending")
+  supplierId       String
+  projectId        String
+  project          Project           @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  organizationId   String
+  organization     Organization      @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  extractionResult ExtractionResult?
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @default(now()) @updatedAt
+
+  @@map('document')
+
+  // Org members can read, create, and update documents.
+  @@allow('read,create,update', organization.members?[userId == auth().id])
+  // Only owners can delete documents.
+  @@allow('delete', organization.members?[userId == auth().id && role == 'owner'])
+}
+
+/// System-generated extraction results from the AI pipeline.
+/// 1:1 with Document. Only the Inngest pipeline (raw `db` client) can write.
+model ExtractionResult {
+  id          String   @id @default(cuid())
+  documentId  String   @unique
+  document    Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  data        String   // JSON-serialized extraction data
+  confidence  String   // JSON-serialized per-field confidence scores
+  modelId     String
+  extractedAt DateTime
+  createdAt   DateTime @default(now())
+
+  @@map('extraction_result')
+
+  // Org members can read results via the document's organization.
+  @@allow('read', document.organization.members?[userId == auth().id])
+  // Only the raw db client (Inngest) can write — deny all mutations from app code.
+  @@deny('create,update,delete', true)
+}

@@ -11,7 +11,8 @@
       "Bash(ls zenstack:*)",
       "Bash(node:*)",
       "Bash(gcloud:*)",
-      "Bash(xargs grep:*)"
+      "Bash(xargs grep:*)",
+      "Bash(xargs:*)"
     ]
   },
   "outputStyle": "Explanatory"

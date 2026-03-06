@@ -1,3 +1,29 @@
-import { Inngest } from "inngest";
+import { EventSchemas, Inngest } from "inngest";
 
-export const inngest = new Inngest({ id: "elmi" });
+// Type-safe event definitions for the Elmi pipeline.
+// Each key is a dot-delimited event name; the value defines `data`.
+type Events = {
+  "elmi/document.uploaded": {
+    data: {
+      documentId: string;
+      orgId: string;
+      projectId: string;
+      gcsPath: string;
+    };
+  };
+  "elmi/extraction.completed": {
+    data: {
+      documentId: string;
+      orgId: string;
+      projectId: string;
+      success: boolean;
+    };
+  };
+};
+
+export const inngest = new Inngest({
+  id: "elmi",
+  schemas: new EventSchemas().fromRecord<Events>(),
+});
+
+export type { Events };
