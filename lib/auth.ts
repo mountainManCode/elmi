@@ -13,6 +13,10 @@ import { db } from "@/lib/db";
 export const auth = betterAuth({
   database: zenstackAdapter(db, { provider: "postgresql" }),
   secret: process.env.BETTER_AUTH_SECRET,
+  emailAndPassword: {
+    enabled: true,
+    requireEmailVerification: false,
+  },
   plugins: [
     organization(),
     magicLink({

@@ -44,3 +44,6 @@ next-env.d.ts
 zenstack/schema.ts
 zenstack/models.ts
 zenstack/input.ts
+
+# local Claude permissions/preferences
+.claude/settings.local.json
