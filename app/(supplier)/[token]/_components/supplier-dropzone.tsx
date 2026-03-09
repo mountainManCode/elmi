@@ -223,7 +223,7 @@ export function SupplierDropzone({ token, uploadCount, maxUploads }: Props) {
                   <IconLoader size={14} />
                 )}
               </ThemeIcon>
-              <Text size="sm" truncate style={{ maxWidth: 300 }}>
+              <Text size="sm" truncate style={{ flex: 1, minWidth: 0 }}>
                 {f.name}
               </Text>
             </Group>

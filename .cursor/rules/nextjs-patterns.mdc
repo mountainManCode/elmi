@@ -34,3 +34,15 @@ app/
 - Use `"use server"` at the top of action files
 - Always validate input with Zod before performing mutations
 - Return typed results, not raw database objects
+
+## Loading & Error Boundaries
+
+- Every route segment that queries the DB must have a sibling `loading.tsx` and `error.tsx`
+- `loading.tsx` uses Mantine `Skeleton` or `Loader` — never a custom spinner
+- `error.tsx` must be a `"use client"` component (Next.js requirement)
+
+## Provider Placement
+
+- `MantineProvider`, `ModalsProvider`, and all context providers go in a client boundary wrapper component
+- Never place context providers directly in a Server Component
+- Data fetching always in Server Components via `getUserDb()` — never `useEffect` + `fetch` for data that can be server-fetched

@@ -32,9 +32,53 @@ Use Mantine hooks instead of building your own:
 - NEVER write `className="flex"` or any Tailwind utility class
 - Use Mantine's `style` prop for one-off styles
 - Use CSS Modules (`*.module.css`) for complex/reusable styles
-- Use Mantine's theme tokens for colors, spacing, and typography
+- Use Mantine theme tokens for colors: `var(--mantine-color-teal-6)`, not hardcoded hex
+- `sx` prop is REMOVED in v8 — use `style` prop or CSS Modules only
+- Use `rem()` from `@mantine/core` for all spacing values in `style` props, never raw px
+- Use `c` prop for text color (`c="dimmed"`), never `style={{ color: '...' }}`
+- Use `gap` on `Group`/`Stack`, not `spacing`
+
+## Common API Mistakes (v8)
+
+- `Button` loading: use `loading` prop directly — never wrap in a custom spinner
+- Forms: always `useForm` from `@mantine/form` — never `react-hook-form` or uncontrolled inputs
+- Notifications: always `@mantine/notifications` — never custom toast implementations
+- `z-index` max 300 — Mantine modal stack starts at 200; never use `!important`
+
+## Responsive Design
+
+- Mobile-first: base styles for mobile, override upward via Mantine breakpoints
+  - xs: 576px · sm: 768px · md: 992px · lg: 1200px · xl: 1400px
+- Layout via `<Grid>`, `<Stack>`, `<Group>` — never hardcoded pixel widths
+- `useMediaQuery` from `@mantine/hooks` for conditional render logic
+- Supplier portal: fully functional on mobile — large touch targets (min 44px), single-column, prominent `<Dropzone>`
+- Verification workspace: desktop-primary split-screen at `lg+`; at `md` and below, stack to single column with PDF behind a toggle
+
+## Component Patterns
+
+- Consultant UI is data-dense: `Table` with `stickyHeader`, wrapped in `ScrollArea`, `Badge` for status
+- Supplier portal: minimal chrome, one clear action per screen, `<Dropzone>` only — no custom drag-and-drop
+- Status indicators MUST combine color + icon + text — never color alone (accessibility)
+
+## Accessibility
+
+- All form fields must have explicit `label` props — placeholder is never a substitute
+- Status indicators: combine color + icon + text
+- Async updates (extraction pipeline) must use `aria-live` regions
+- Interactive elements: min 44px touch target
 
 ## Client Directives
 
 - Add `"use client"` only when the component uses Mantine hooks or browser APIs
 - Server Components should remain the default
+- `MantineProvider` and context providers go in a client boundary wrapper, never directly in a Server Component
+
+## Hard Bans
+
+- No Tailwind classes
+- No `!important`
+- No `z-index` above 300
+- No `useEffect` for data that can be server-fetched
+- No custom drag-and-drop — use `@mantine/dropzone`
+- No `react-hook-form` — use `@mantine/form`
+- No custom toast/notification UI — use `@mantine/notifications`

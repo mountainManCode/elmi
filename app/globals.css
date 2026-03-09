@@ -1,3 +1,23 @@
 @import "@mantine/core/styles.css";
 @import "@mantine/dropzone/styles.css";
 @import "@mantine/notifications/styles.css";
+
+:root {
+  /* Elmi sidebar design tokens — used in consultant-shell.tsx */
+  --elmi-sidebar-bg: #0e1117;
+  --elmi-sidebar-border: #1e2330;
+  --elmi-sidebar-accent: #5b9e8a;
+  --elmi-sidebar-accent-dark: #3d7a68;
+  --elmi-sidebar-accent-bg: rgba(91, 158, 138, 0.12);
+  --elmi-sidebar-text: #a8b3c8;
+  --elmi-sidebar-text-muted: #6b7489;
+  --elmi-sidebar-text-active: #e8edf5;
+  --elmi-sidebar-text-name: #c5cdd9;
+  --elmi-sidebar-avatar-bg-start: #2a3654;
+  --elmi-sidebar-avatar-bg-end: #1e2740;
+  --elmi-sidebar-danger: #e05252;
+  --elmi-sidebar-danger-bg: rgba(224, 82, 82, 0.08);
+
+  /* Elmi content area */
+  --elmi-content-bg: #f5f6f8;
+}

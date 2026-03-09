@@ -1,0 +1,6 @@
+{
+  "enabledPlugins": {
+    "vtsls@claude-code-lsps": true,
+    "playwright@claude-plugins-official": true
+  }
+}

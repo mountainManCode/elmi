@@ -80,8 +80,8 @@ export default function SignInPage() {
   };
 
   return (
-    <Center mih="100vh">
-      <Card shadow="md" padding="xl" radius="md" w={400} withBorder>
+    <Center mih="100vh" px="md">
+      <Card shadow="md" padding="xl" radius="md" w={{ base: "100%", xs: 400 }} withBorder>
         <Stack gap="lg">
           <Box>
             <Title order={2}>
