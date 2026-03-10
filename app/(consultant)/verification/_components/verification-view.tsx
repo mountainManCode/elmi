@@ -7,8 +7,6 @@ import {
   Box,
   Button,
   Divider,
-  Grid,
-  GridCol,
   Group,
   ScrollArea,
   Stack,
@@ -26,7 +24,7 @@ import {
   IconRefresh,
 } from "@tabler/icons-react";
 import { approveDocument, rejectDocument, retryExtraction } from "../actions";
-import type { ExtractionData } from "@/lib/validators/extraction";
+import type { ExtractionData, LineItem } from "@/lib/validators/extraction";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -105,6 +103,67 @@ function FieldGroup({ title, children }: { title: string; children: React.ReactN
         {title}
       </Text>
       {children}
+    </Box>
+  );
+}
+
+// ─── Line item card ───────────────────────────────────────────────────────────
+
+function LineItemCard({ item }: { item: LineItem }) {
+  const consumptionStr =
+    item.consumption !== null
+      ? `${item.consumption}${item.consumptionUnit ? ` ${item.consumptionUnit}` : ""}`
+      : null;
+
+  const costStr = item.cost !== null ? `$${item.cost.toFixed(2)}` : null;
+
+  return (
+    <Box
+      style={{
+        padding: "10px 12px",
+        borderRadius: 6,
+        border: "1px solid var(--mantine-color-gray-2)",
+        background: "var(--mantine-color-gray-0)",
+      }}
+    >
+      <Group justify="space-between" align="center" mb={6}>
+        <Badge size="xs" color="blue" variant="light">
+          {item.utilityType}
+        </Badge>
+        {costStr && (
+          <Text size="sm" fw={600}>
+            {costStr}
+          </Text>
+        )}
+      </Group>
+      <Group gap="xl">
+        {consumptionStr && (
+          <Box>
+            <Text size="xs" c="dimmed" style={{ fontSize: 10, textTransform: "uppercase", letterSpacing: "0.06em", fontWeight: 600 }}>
+              Consumption
+            </Text>
+            <Text size="sm">{consumptionStr}</Text>
+          </Box>
+        )}
+        {item.rate && (
+          <Box>
+            <Text size="xs" c="dimmed" style={{ fontSize: 10, textTransform: "uppercase", letterSpacing: "0.06em", fontWeight: 600 }}>
+              Rate
+            </Text>
+            <Text size="sm">{item.rate}</Text>
+          </Box>
+        )}
+        {item.meterNumber && (
+          <Box>
+            <Text size="xs" c="dimmed" style={{ fontSize: 10, textTransform: "uppercase", letterSpacing: "0.06em", fontWeight: 600 }}>
+              Meter
+            </Text>
+            <Text size="sm" style={{ fontFamily: "'Courier New', Courier, monospace", fontSize: 12 }}>
+              {item.meterNumber}
+            </Text>
+          </Box>
+        )}
+      </Group>
     </Box>
   );
 }
@@ -254,32 +313,29 @@ export function VerificationView({ documentId, fileName, status, pdfUrl, extract
       </Box>
 
       {/* Split-screen body */}
-      <Grid
-        style={{ flex: 1, margin: 0, minHeight: 0, gridAutoRows: "1fr" }}
-        gutter={0}
-      >
+      <Box style={{ flex: 1, minHeight: 0, display: "flex", overflow: "hidden" }}>
         {/* PDF pane */}
-        {(showPdf) && (
-          <GridCol
-            span={{ base: 12, lg: 7 }}
-            style={{ height: "100%", borderRight: "1px solid var(--mantine-color-gray-2)" }}
+        {showPdf && (
+          <Box
+            style={{
+              flex: 7,
+              minWidth: 0,
+              height: "100%",
+              borderRight: "1px solid var(--mantine-color-gray-2)",
+              background: "#525659",
+            }}
           >
-            <Box style={{ height: "100%", background: "#525659" }}>
-              <iframe
-                src={pdfUrl}
-                style={{ width: "100%", height: "100%", border: "none", display: "block" }}
-                title={fileName}
-              />
-            </Box>
-          </GridCol>
+            <iframe
+              src={pdfUrl}
+              style={{ width: "100%", height: "100%", border: "none", display: "block" }}
+              title={fileName}
+            />
+          </Box>
         )}
 
         {/* Fields pane */}
-        <GridCol
-          span={{ base: 12, lg: showPdf ? 5 : 12 }}
-          style={{ height: "100%", display: "flex", flexDirection: "column" }}
-        >
-          <ScrollArea style={{ flex: 1 }} px="md" py="md">
+        <Box style={{ flex: showPdf ? 5 : 1, minWidth: 0, display: "flex", flexDirection: "column", height: "100%" }}>
+          <ScrollArea style={{ flex: 1, minHeight: 0 }} h="100%" px="md" py="md" type="always" scrollbarSize={6}>
             {isProcessing && (
               <Stack align="center" gap="sm" style={{ padding: "60px 0" }}>
                 <IconLoader size={32} color="var(--mantine-color-gray-4)" />
@@ -311,10 +367,11 @@ export function VerificationView({ documentId, fileName, status, pdfUrl, extract
 
                 <Divider />
 
-                <FieldGroup title="Facility">
+                <FieldGroup title="Customer &amp; Location">
+                  <FieldRow label="Customer Name" value={extractionData.customerName.value} confidence={extractionData.customerName.confidence} />
                   <FieldRow label="Facility Name" value={extractionData.facilityName.value} confidence={extractionData.facilityName.confidence} />
-                  <FieldRow label="Address" value={extractionData.facilityAddress.value} confidence={extractionData.facilityAddress.confidence} />
-                  <FieldRow label="Applicant" value={extractionData.applicant.value} confidence={extractionData.applicant.confidence} />
+                  <FieldRow label="Service Address" value={extractionData.serviceAddress.value} confidence={extractionData.serviceAddress.confidence} />
+                  <FieldRow label="Mailing Address" value={extractionData.mailingAddress.value} confidence={extractionData.mailingAddress.confidence} />
                   <FieldRow label="Issuing Authority" value={extractionData.issuingAuthority.value} confidence={extractionData.issuingAuthority.confidence} />
                 </FieldGroup>
 
@@ -322,19 +379,38 @@ export function VerificationView({ documentId, fileName, status, pdfUrl, extract
 
                 <FieldGroup title="Dates">
                   <FieldRow label="Issue Date" value={extractionData.issueDate.value} confidence={extractionData.issueDate.confidence} />
-                  <FieldRow label="Expiration Date" value={extractionData.expirationDate.value} confidence={extractionData.expirationDate.confidence} />
+                  <FieldRow label="Due Date" value={extractionData.dueDate.value} confidence={extractionData.dueDate.confidence} />
                   <FieldRow label="Billing Period Start" value={extractionData.billingPeriodStart.value} confidence={extractionData.billingPeriodStart.confidence} />
                   <FieldRow label="Billing Period End" value={extractionData.billingPeriodEnd.value} confidence={extractionData.billingPeriodEnd.confidence} />
+                  <FieldRow label="Billing Days" value={extractionData.billingDays.value} confidence={extractionData.billingDays.confidence} />
                 </FieldGroup>
 
                 <Divider />
 
-                <FieldGroup title="Utility Data">
-                  <FieldRow label="Utility Type" value={extractionData.utilityType.value} confidence={extractionData.utilityType.confidence} />
-                  <FieldRow label="Consumption" value={extractionData.consumption.value} confidence={extractionData.consumption.confidence} />
-                  <FieldRow label="Unit" value={extractionData.consumptionUnit.value} confidence={extractionData.consumptionUnit.confidence} />
+                {/* Line items — one card per utility service */}
+                <FieldGroup title={`Utility Services (${extractionData.lineItems.value.length})`}>
+                  {extractionData.lineItems.value.length === 0 ? (
+                    <Text size="xs" c="dimmed" py={8}>No line items extracted.</Text>
+                  ) : (
+                    <Stack gap="xs" mt={4}>
+                      {extractionData.lineItems.value.map((item: LineItem, i: number) => (
+                        <LineItemCard key={i} item={item} />
+                      ))}
+                    </Stack>
+                  )}
+                  <Box mt={4}>
+                    <ConfidenceBadge confidence={extractionData.lineItems.confidence} />
+                  </Box>
+                </FieldGroup>
+
+                <Divider />
+
+                <FieldGroup title="Bill Totals">
                   <FieldRow label="Total Cost" value={extractionData.totalCost.value} confidence={extractionData.totalCost.confidence} />
                   <FieldRow label="Currency" value={extractionData.currency.value} confidence={extractionData.currency.confidence} />
+                  <FieldRow label="Previous Balance" value={extractionData.previousBalance.value} confidence={extractionData.previousBalance.confidence} />
+                  <FieldRow label="Payments Received" value={extractionData.paymentsReceived.value} confidence={extractionData.paymentsReceived.confidence} />
+                  <FieldRow label="Amount Due" value={extractionData.amountDue.value} confidence={extractionData.amountDue.confidence} />
                 </FieldGroup>
 
                 {(extractionData.conditions.value.length > 0 || extractionData.emissionsLimits.value.length > 0) && (
@@ -356,8 +432,8 @@ export function VerificationView({ documentId, fileName, status, pdfUrl, extract
               </Stack>
             )}
           </ScrollArea>
-        </GridCol>
-      </Grid>
+        </Box>
+      </Box>
     </Box>
   );
 }

@@ -1,77 +1,97 @@
 "use server";
 
 import { getUserDb } from "@/lib/db";
-import { extractionSchema } from "@/lib/validators/extraction";
+import { extractionSchema, type LineItem } from "@/lib/validators/extraction";
 
 export type ExportFormat = "cyf" | "aclymate" | "persefoni";
 
+type ExData = ReturnType<typeof extractionSchema.parse>;
 type CsvRow = Record<string, string | number | null>;
 
-// ─── Format column mappers ────────────────────────────────────────────────────
+// ─── Shared context extracted once per document ───────────────────────────────
 
-function toCyfRow(
-  fileName: string,
-  data: ReturnType<typeof extractionSchema.parse>
-): CsvRow {
+function docContext(fileName: string, data: ExData) {
   return {
-    document_name: fileName,
-    facility_name: data.facilityName.value ?? "",
-    facility_address: data.facilityAddress.value ?? "",
-    permit_number: data.permitNumber.value ?? "",
-    account_number: data.accountNumber.value ?? "",
-    utility_type: data.utilityType.value ?? "",
-    consumption: data.consumption.value ?? "",
-    consumption_unit: data.consumptionUnit.value ?? "",
-    billing_period_start: data.billingPeriodStart.value ?? "",
-    billing_period_end: data.billingPeriodEnd.value ?? "",
-    total_cost: data.totalCost.value ?? "",
+    fileName,
+    customerName: data.customerName.value ?? "",
+    facilityName: data.facilityName.value ?? "",
+    serviceAddress: data.serviceAddress.value ?? "",
+    accountNumber: data.accountNumber.value ?? "",
+    permitNumber: data.permitNumber.value ?? "",
+    issuingAuthority: data.issuingAuthority.value ?? "",
+    issueDate: data.issueDate.value ?? "",
+    dueDate: data.dueDate.value ?? "",
+    billingPeriodStart: data.billingPeriodStart.value ?? "",
+    billingPeriodEnd: data.billingPeriodEnd.value ?? "",
+    billingDays: data.billingDays.value,
+    totalCost: data.totalCost.value,
     currency: data.currency.value ?? "",
-    issuing_authority: data.issuingAuthority.value ?? "",
-    issue_date: data.issueDate.value ?? "",
-    expiration_date: data.expirationDate.value ?? "",
-    extraction_confidence: data.pageCount.confidence,
   };
 }
 
-function toAclymateRow(
-  fileName: string,
-  data: ReturnType<typeof extractionSchema.parse>
-): CsvRow {
-  return {
-    "Document Name": fileName,
-    "Entity Name": data.facilityName.value ?? "",
-    Location: data.facilityAddress.value ?? "",
-    "Activity Type": data.utilityType.value ?? "",
-    Quantity: data.consumption.value ?? "",
-    Unit: data.consumptionUnit.value ?? "",
-    "Start Date": data.billingPeriodStart.value ?? data.issueDate.value ?? "",
-    "End Date": data.billingPeriodEnd.value ?? data.expirationDate.value ?? "",
-    Cost: data.totalCost.value ?? "",
-    Currency: data.currency.value ?? "",
-    "Data Source": data.issuingAuthority.value ?? "",
-    Notes: data.extractionNotes.value ?? "",
-  };
+type DocCtx = ReturnType<typeof docContext>;
+
+// ─── Format column mappers (one row per line item) ────────────────────────────
+
+function toCyfRows(ctx: DocCtx, lineItems: LineItem[]): CsvRow[] {
+  return lineItems.map((item) => ({
+    document_name: ctx.fileName,
+    customer_name: ctx.customerName,
+    facility_name: ctx.facilityName,
+    service_address: ctx.serviceAddress,
+    account_number: ctx.accountNumber,
+    permit_number: ctx.permitNumber,
+    utility_type: item.utilityType,
+    consumption: item.consumption ?? "",
+    consumption_unit: item.consumptionUnit ?? "",
+    cost: item.cost ?? "",
+    meter_number: item.meterNumber ?? "",
+    billing_period_start: ctx.billingPeriodStart,
+    billing_period_end: ctx.billingPeriodEnd,
+    billing_days: ctx.billingDays ?? "",
+    bill_total: ctx.totalCost ?? "",
+    currency: ctx.currency,
+    issuing_authority: ctx.issuingAuthority,
+    issue_date: ctx.issueDate,
+    due_date: ctx.dueDate,
+  }));
 }
 
-function toPersefoniRow(
-  fileName: string,
-  data: ReturnType<typeof extractionSchema.parse>
-): CsvRow {
-  return {
-    document_name: fileName,
-    facility: data.facilityName.value ?? "",
-    address: data.facilityAddress.value ?? "",
+function toAclymateRows(ctx: DocCtx, lineItems: LineItem[]): CsvRow[] {
+  return lineItems.map((item) => ({
+    "Document Name": ctx.fileName,
+    "Entity Name": ctx.customerName || ctx.facilityName,
+    Location: ctx.serviceAddress,
+    "Activity Type": item.utilityType,
+    Quantity: item.consumption ?? "",
+    Unit: item.consumptionUnit ?? "",
+    Cost: item.cost ?? "",
+    "Start Date": ctx.billingPeriodStart || ctx.issueDate,
+    "End Date": ctx.billingPeriodEnd || ctx.dueDate,
+    Currency: ctx.currency,
+    "Data Source": ctx.issuingAuthority,
+    "Account Number": ctx.accountNumber,
+    Notes: "",
+  }));
+}
+
+function toPersefoniRows(ctx: DocCtx, lineItems: LineItem[]): CsvRow[] {
+  return lineItems.map((item) => ({
+    document_name: ctx.fileName,
+    facility: ctx.facilityName || ctx.customerName,
+    address: ctx.serviceAddress,
     scope: "",
-    activity: data.utilityType.value ?? "",
-    amount: data.consumption.value ?? "",
-    unit: data.consumptionUnit.value ?? "",
-    period_start: data.billingPeriodStart.value ?? data.issueDate.value ?? "",
-    period_end: data.billingPeriodEnd.value ?? data.expirationDate.value ?? "",
-    spend: data.totalCost.value ?? "",
-    currency: data.currency.value ?? "",
-    data_source: data.issuingAuthority.value ?? "",
-    permit_number: data.permitNumber.value ?? "",
-  };
+    activity: item.utilityType,
+    amount: item.consumption ?? "",
+    unit: item.consumptionUnit ?? "",
+    spend: item.cost ?? "",
+    period_start: ctx.billingPeriodStart || ctx.issueDate,
+    period_end: ctx.billingPeriodEnd || ctx.dueDate,
+    currency: ctx.currency,
+    data_source: ctx.issuingAuthority,
+    permit_number: ctx.permitNumber,
+    meter_number: item.meterNumber ?? "",
+  }));
 }
 
 // ─── CSV serializer ───────────────────────────────────────────────────────────
@@ -106,7 +126,6 @@ export async function generateCsv(
 
   const db = await getUserDb();
 
-  // Load all selected documents + their extraction results
   const documents = await db.document.findMany({
     where: { id: { in: documentIds }, status: "approved" },
   });
@@ -132,14 +151,22 @@ export async function generateCsv(
       const parsed = extractionSchema.safeParse(raw);
       if (!parsed.success) continue;
 
-      const row =
-        format === "cyf"
-          ? toCyfRow(doc.fileName, parsed.data)
-          : format === "aclymate"
-            ? toAclymateRow(doc.fileName, parsed.data)
-            : toPersefoniRow(doc.fileName, parsed.data);
+      const ctx = docContext(doc.fileName, parsed.data);
+      const lineItems = parsed.data.lineItems.value;
 
-      rows.push(row);
+      // If no line items, still produce one row with document-level data
+      const items = lineItems.length > 0
+        ? lineItems
+        : [{ utilityType: "", consumption: null, consumptionUnit: null, cost: null, rate: null, meterNumber: null }];
+
+      const docRows =
+        format === "cyf"
+          ? toCyfRows(ctx, items)
+          : format === "aclymate"
+            ? toAclymateRows(ctx, items)
+            : toPersefoniRows(ctx, items);
+
+      rows.push(...docRows);
     } catch {
       continue;
     }

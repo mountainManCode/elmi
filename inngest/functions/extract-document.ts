@@ -71,9 +71,26 @@ export const extractDocument = inngest.createFunction(
               {
                 type: "text",
                 text: `Extract all relevant data from this environmental permit or utility document.
+
 For each field, provide the extracted value and a confidence score between 0 and 1.
 If a field is not found in the document, set its value to null with confidence 0.
-Be thorough — extract permit numbers, dates, facility info, utility data, conditions, and emissions limits.`,
+
+IMPORTANT for utility bills:
+- Extract EVERY utility service as a separate line item in the lineItems array.
+  e.g. a combined electric + gas bill should produce TWO line items.
+- For each line item: utilityType (e.g. "Electric", "Natural Gas", "Water"),
+  consumption (total for the period, not daily average), consumptionUnit (e.g. "kWh", "therms"),
+  cost (charges for that service), rate (tariff/schedule if shown), meterNumber (if shown).
+- customerName is the account holder (not "applicant").
+- serviceAddress is where the service is delivered; mailingAddress is for correspondence.
+- dueDate is the payment due date (NOT expiration date).
+- billingDays is the number of days in the billing cycle.
+- totalCost is the total amount due across all services.
+- previousBalance, paymentsReceived, and amountDue track the account balance.
+
+For environmental permits: extract conditions, emissionsLimits, permitNumber, issueDate, etc.
+
+Be thorough — extract every field you can find in the document.`,
               },
               {
                 type: "file",
