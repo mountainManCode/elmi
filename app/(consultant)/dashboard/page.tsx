@@ -1,7 +1,7 @@
 // Consultant Dashboard — Server Component
 // Shows supplier status table for the org's active projects.
 
-import { Box, Grid, Group, Text, Title } from "@mantine/core";
+import { Box, Grid, GridCol, Group, Text, Title } from "@mantine/core";
 import { getUserDb } from "@/lib/db";
 import { CreateOrgPrompt } from "./_components/create-org-prompt";
 import { ProjectCard } from "./_components/project-card";
@@ -63,7 +63,7 @@ export default async function DashboardPage() {
       ) : (
         <Grid gutter="md">
           {projects.map((project) => (
-            <Grid.Col key={project.id} span={{ base: 12, md: 6, xl: 4 }}>
+            <GridCol key={project.id} span={{ base: 12, md: 6, xl: 4 }}>
               <ProjectCard
                 project={project}
                 supplierLinks={supplierLinks.filter(
@@ -71,7 +71,7 @@ export default async function DashboardPage() {
                 )}
                 documents={documents.filter((d) => d.projectId === project.id)}
               />
-            </Grid.Col>
+            </GridCol>
           ))}
         </Grid>
       )}

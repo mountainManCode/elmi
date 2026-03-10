@@ -24,6 +24,7 @@ import {
   IconLink,
   IconPlus,
 } from "@tabler/icons-react";
+import Link from "next/link";
 import { CreateSupplierLinkModal } from "./create-supplier-link-modal";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -157,9 +158,23 @@ function SupplierLinkRow({
       </Table.Td>
       <Table.Td>
         <Group gap={4} wrap="wrap">
-          {documents.map((doc) => (
-            <StatusBadge key={doc.id} status={doc.status} />
-          ))}
+          {documents.map((doc) =>
+            doc.status === "needs_review" ? (
+              <Badge
+                key={doc.id}
+                size="xs"
+                color="orange"
+                variant="light"
+                component={Link}
+                href={`/verification?documentId=${doc.id}`}
+                style={{ cursor: "pointer", textDecoration: "none" }}
+              >
+                Review
+              </Badge>
+            ) : (
+              <StatusBadge key={doc.id} status={doc.status} />
+            )
+          )}
           {documents.length === 0 && (
             <Text size="xs" c="dimmed">
               —
