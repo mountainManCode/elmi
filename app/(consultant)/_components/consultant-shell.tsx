@@ -26,6 +26,7 @@ type User = { name: string | null; email: string };
 
 const NAV_ITEMS = [
   { label: "Dashboard", href: "/dashboard", icon: IconLayoutDashboard },
+  // { label: "Verification", href: "/verification", icon: IconCircleCheck },
   { label: "Export", href: "/export", icon: IconFileExport },
 ];
 

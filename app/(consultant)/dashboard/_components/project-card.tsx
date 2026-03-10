@@ -23,8 +23,11 @@ import {
   IconCopy,
   IconLink,
   IconPlus,
+  IconRefresh,
 } from "@tabler/icons-react";
 import Link from "next/link";
+import { useTransition } from "react";
+import { retryExtraction } from "../../verification/actions";
 import { CreateSupplierLinkModal } from "./create-supplier-link-modal";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -114,6 +117,59 @@ function StatusSummary({ documents }: { documents: DocumentRow[] }) {
 
 // ─── Supplier link row ────────────────────────────────────────────────────────
 
+function DocStatusCell({ doc }: { doc: DocumentRow }) {
+  const [isPending, startTransition] = useTransition();
+  const stuck = doc.status === "pending" || doc.status === "extracting";
+
+  const handleRetry = () => {
+    startTransition(async () => {
+      const result = await retryExtraction(doc.id);
+      if (!result.success) {
+        notifications.show({ title: "Retry failed", message: result.error, color: "red" });
+      } else {
+        notifications.show({
+          title: "Extraction queued",
+          message: `${doc.fileName} re-queued for extraction.`,
+          color: "blue",
+        });
+      }
+    });
+  };
+
+  if (stuck) {
+    return (
+      <Tooltip label="Pipeline may be stuck — click to retry" withArrow>
+        <ActionIcon
+          size="xs"
+          variant="light"
+          color="gray"
+          loading={isPending}
+          onClick={handleRetry}
+        >
+          <IconRefresh size={11} />
+        </ActionIcon>
+      </Tooltip>
+    );
+  }
+
+  if (doc.status === "needs_review") {
+    return (
+      <Badge
+        size="xs"
+        color="orange"
+        variant="light"
+        component={Link}
+        href={`/verification?documentId=${doc.id}`}
+        style={{ cursor: "pointer", textDecoration: "none" }}
+      >
+        Review
+      </Badge>
+    );
+  }
+
+  return <StatusBadge status={doc.status} />;
+}
+
 function SupplierLinkRow({
   link,
   documents,
@@ -123,9 +179,9 @@ function SupplierLinkRow({
 }) {
   const expired = new Date() > link.expiresAt;
   const inactive = !link.isActive || expired;
-  const uploadUrl = `${window.location.origin}/${link.token}`;
 
   const copyLink = () => {
+    const uploadUrl = `${window.location.origin}/${link.token}`;
     navigator.clipboard.writeText(uploadUrl).then(() => {
       notifications.show({
         title: "Copied",
@@ -158,23 +214,9 @@ function SupplierLinkRow({
       </Table.Td>
       <Table.Td>
         <Group gap={4} wrap="wrap">
-          {documents.map((doc) =>
-            doc.status === "needs_review" ? (
-              <Badge
-                key={doc.id}
-                size="xs"
-                color="orange"
-                variant="light"
-                component={Link}
-                href={`/verification?documentId=${doc.id}`}
-                style={{ cursor: "pointer", textDecoration: "none" }}
-              >
-                Review
-              </Badge>
-            ) : (
-              <StatusBadge key={doc.id} status={doc.status} />
-            )
-          )}
+          {documents.map((doc) => (
+            <DocStatusCell key={doc.id} doc={doc} />
+          ))}
           {documents.length === 0 && (
             <Text size="xs" c="dimmed">
               —

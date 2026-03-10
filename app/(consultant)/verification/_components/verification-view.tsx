@@ -8,6 +8,7 @@ import {
   Button,
   Divider,
   Grid,
+  GridCol,
   Group,
   ScrollArea,
   Stack,
@@ -22,8 +23,9 @@ import {
   IconEyeOff,
   IconFileTypePdf,
   IconLoader,
+  IconRefresh,
 } from "@tabler/icons-react";
-import { approveDocument, rejectDocument } from "../actions";
+import { approveDocument, rejectDocument, retryExtraction } from "../actions";
 import type { ExtractionData } from "@/lib/validators/extraction";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -142,8 +144,25 @@ export function VerificationView({ documentId, fileName, status, pdfUrl, extract
     });
   };
 
+  const handleRetry = () => {
+    startTransition(async () => {
+      const result = await retryExtraction(documentId);
+      if (result.success) {
+        setCurrentStatus("pending");
+        notifications.show({
+          title: "Extraction queued",
+          message: "Pipeline restarted. Refresh in a moment to see results.",
+          color: "blue",
+          icon: <IconRefresh size={16} />,
+        });
+      } else {
+        notifications.show({ title: "Error", message: result.error, color: "red" });
+      }
+    });
+  };
+
   return (
-    <Box style={{ height: "calc(100vh - 0px)", display: "flex", flexDirection: "column" }}>
+    <Box style={{ height: "calc(100dvh - var(--app-shell-header-height, 0px))", display: "flex", flexDirection: "column", overflow: "hidden" }}>
       {/* Header bar */}
       <Box
         style={{
@@ -177,6 +196,22 @@ export function VerificationView({ documentId, fileName, status, pdfUrl, extract
                 {showPdf ? <IconEyeOff size={16} /> : <IconEye size={16} />}
               </ActionIcon>
             </Tooltip>
+
+            {isProcessing && (
+              <Tooltip label="Restart extraction pipeline" withArrow>
+                <Button
+                  size="xs"
+                  variant="light"
+                  color="blue"
+                  leftSection={<IconRefresh size={12} />}
+                  onClick={handleRetry}
+                  loading={isPending}
+                  disabled={isPending}
+                >
+                  Retry
+                </Button>
+              </Tooltip>
+            )}
 
             {!isApproved && !isRejected && !isProcessing && (
               <>
@@ -220,12 +255,12 @@ export function VerificationView({ documentId, fileName, status, pdfUrl, extract
 
       {/* Split-screen body */}
       <Grid
-        style={{ flex: 1, margin: 0, minHeight: 0 }}
+        style={{ flex: 1, margin: 0, minHeight: 0, gridAutoRows: "1fr" }}
         gutter={0}
       >
         {/* PDF pane */}
         {(showPdf) && (
-          <Grid.Col
+          <GridCol
             span={{ base: 12, lg: 7 }}
             style={{ height: "100%", borderRight: "1px solid var(--mantine-color-gray-2)" }}
           >
@@ -236,11 +271,11 @@ export function VerificationView({ documentId, fileName, status, pdfUrl, extract
                 title={fileName}
               />
             </Box>
-          </Grid.Col>
+          </GridCol>
         )}
 
         {/* Fields pane */}
-        <Grid.Col
+        <GridCol
           span={{ base: 12, lg: showPdf ? 5 : 12 }}
           style={{ height: "100%", display: "flex", flexDirection: "column" }}
         >
@@ -251,8 +286,9 @@ export function VerificationView({ documentId, fileName, status, pdfUrl, extract
                 <Text c="dimmed" size="sm">
                   Extraction in progress…
                 </Text>
-                <Text c="dimmed" size="xs">
-                  Refresh the page in a moment to see the extracted fields.
+                <Text c="dimmed" size="xs" ta="center">
+                  Refresh the page in a moment to see extracted fields.
+                  If it stays stuck, use the Retry button above.
                 </Text>
               </Stack>
             )}
@@ -320,7 +356,7 @@ export function VerificationView({ documentId, fileName, status, pdfUrl, extract
               </Stack>
             )}
           </ScrollArea>
-        </Grid.Col>
+        </GridCol>
       </Grid>
     </Box>
   );

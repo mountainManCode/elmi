@@ -15,7 +15,8 @@
       "Bash(xargs:*)",
       "Bash(ls:*)",
       "Bash(cat:*)",
-      "Bash(mv:*)"
+      "Bash(mv:*)",
+      "Bash(find:*)"
     ]
   },
   "outputStyle": "Explanatory"
