@@ -6,6 +6,8 @@ import { notFound, redirect } from "next/navigation";
 import { getUserDb } from "@/lib/db";
 import { getSignedReadUrl } from "@/lib/gcs";
 import { extractionSchema } from "@/lib/validators/extraction";
+import { fieldComparisonSchema } from "@/lib/validators/validation";
+import { z } from "zod";
 import { VerificationView } from "./_components/verification-view";
 import { DocumentQueue } from "./_components/document-queue";
 
@@ -46,13 +48,16 @@ export default async function VerificationPage({ searchParams }: Props) {
 
   if (!document) notFound();
 
-  const extractionResult = await db.extractionResult.findFirst({
-    where: { documentId },
-    orderBy: { createdAt: "desc" },
-  });
-
-  // Generate a short-lived signed URL for reading the PDF (15 min TTL)
-  const pdfUrl = await getSignedReadUrl(document.gcsPath);
+  const [extractionResult, validationResult, pdfUrl] = await Promise.all([
+    db.extractionResult.findFirst({
+      where: { documentId },
+      orderBy: { createdAt: "desc" },
+    }),
+    db.validationResult.findFirst({
+      where: { documentId },
+    }),
+    getSignedReadUrl(document.gcsPath),
+  ]);
 
   // Parse extraction data — may be null if pipeline hasn't completed yet
   let extractionData = null;
@@ -66,6 +71,18 @@ export default async function VerificationPage({ searchParams }: Props) {
     }
   }
 
+  // Parse per-field validation comparisons — null if validation hasn't run
+  let validationFields = null;
+  if (validationResult?.data) {
+    try {
+      const raw = JSON.parse(validationResult.data);
+      const parsed = z.record(z.string(), fieldComparisonSchema).safeParse(raw);
+      if (parsed.success) validationFields = parsed.data;
+    } catch {
+      // malformed JSON — skip validation flags
+    }
+  }
+
   return (
     <VerificationView
       documentId={document.id}
@@ -73,6 +90,7 @@ export default async function VerificationPage({ searchParams }: Props) {
       status={document.status}
       pdfUrl={pdfUrl}
       extractionData={extractionData}
+      validationFields={validationFields}
     />
   );
 }

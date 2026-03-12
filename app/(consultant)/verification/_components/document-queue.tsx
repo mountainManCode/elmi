@@ -40,13 +40,14 @@ type Props = {
 const STATUS_CONFIG: Record<string, { label: string; color: string; dot: string }> = {
   needs_review: { label: "Needs Review", color: "orange", dot: "#f59e0b" },
   extracting:   { label: "Extracting",   color: "blue",   dot: "#3b82f6" },
+  validating:   { label: "Validating",   color: "violet", dot: "#8b5cf6" },
   pending:      { label: "Pending",      color: "gray",   dot: "#9ca3af" },
   approved:     { label: "Approved",     color: "teal",   dot: "#10b981" },
   rejected:     { label: "Rejected",     color: "red",    dot: "#ef4444" },
 };
 
 // Priority order for sorting (most urgent first)
-const STATUS_SORT_ORDER = ["needs_review", "extracting", "pending", "rejected", "approved"];
+const STATUS_SORT_ORDER = ["needs_review", "extracting", "validating", "pending", "rejected", "approved"];
 
 function sortByStatus(a: DocumentRow, b: DocumentRow) {
   const ai = STATUS_SORT_ORDER.indexOf(a.status);
@@ -211,6 +212,7 @@ export function DocumentQueue({ documents, projectMap }: Props) {
     { value: "all",          label: "All" },
     { value: "needs_review", label: "Needs Review" },
     { value: "extracting",   label: "Processing" },
+    { value: "validating",   label: "Validating" },
     { value: "approved",     label: "Approved" },
     { value: "rejected",     label: "Rejected" },
   ];

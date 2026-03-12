@@ -133,9 +133,12 @@ Be thorough — extract every field you can find in the document.`,
         },
       });
 
+      // If a validation model is configured, hand off to the validation step
+      // (which sets the final status to needs_review). Otherwise go direct.
+      const nextStatus = process.env.VALIDATION_MODEL ? "validating" : "needs_review";
       await db.document.update({
         where: { id: document.id },
-        data: { status: "needs_review" },
+        data: { status: nextStatus },
       });
     });
 

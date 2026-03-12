@@ -76,6 +76,7 @@ type Props = {
 const STATUS_CONFIG: Record<string, { label: string; color: string }> = {
   pending: { label: "Pending", color: "gray" },
   extracting: { label: "Extracting", color: "blue" },
+  validating: { label: "Validating", color: "violet" },
   needs_review: { label: "Review", color: "orange" },
   approved: { label: "Approved", color: "teal" },
 };
@@ -123,7 +124,7 @@ function StatusSummary({ documents }: { documents: DocumentRow[] }) {
 
 function DocStatusCell({ doc }: { doc: DocumentRow }) {
   const [isPending, startTransition] = useTransition();
-  const stuck = doc.status === "pending" || doc.status === "extracting";
+  const stuck = doc.status === "pending" || doc.status === "extracting" || doc.status === "validating";
 
   const handleRetry = () => {
     startTransition(async () => {

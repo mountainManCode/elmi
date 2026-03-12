@@ -19,6 +19,15 @@ type Events = {
       success: boolean;
     };
   };
+  "elmi/validation.completed": {
+    data: {
+      documentId: string;
+      orgId: string;
+      projectId: string;
+      success: boolean;
+      overallAgreement: number;
+    };
+  };
 };
 
 export const inngest = new Inngest({

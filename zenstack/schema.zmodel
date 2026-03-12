@@ -267,7 +267,7 @@ model Project {
 }
 
 /// A Document represents an uploaded PDF (permit, utility bill, etc.).
-/// Tracks extraction pipeline status: pending → extracting → needs_review → approved.
+/// Tracks extraction pipeline status: pending → extracting → validating → needs_review → approved.
 model Document {
   id               String            @id @default(cuid())
   fileName         String
@@ -279,6 +279,7 @@ model Document {
   organizationId   String
   organization     Organization      @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   extractionResult ExtractionResult?
+  validationResult ValidationResult?
   createdAt        DateTime          @default(now())
   updatedAt        DateTime          @default(now()) @updatedAt
 
@@ -288,6 +289,28 @@ model Document {
   @@allow('read,create,update', organization.members?[userId == auth().id])
   // Only owners can delete documents.
   @@allow('delete', organization.members?[userId == auth().id && role == 'owner'])
+}
+
+/// System-generated validation results from the Claude Sonnet cross-check step.
+/// 1:1 with Document. Only the Inngest pipeline (raw `db` client) can write.
+/// Enabled only when VALIDATION_MODEL env var is set.
+model ValidationResult {
+  id                 String   @id @default(cuid())
+  documentId         String   @unique
+  document           Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  extractionResultId String
+  data               String   // JSON: per-field {agrees, geminiValue, claudeValue, note}
+  overallAgreement   Float    // 0–1 agreement score
+  modelId            String
+  validatedAt        DateTime
+  createdAt          DateTime @default(now())
+
+  @@map('validation_result')
+
+  // Org members can read validation results via the document's organization.
+  @@allow('read', document.organization.members?[userId == auth().id])
+  // Only the raw db client (Inngest) can write — deny all mutations from app code.
+  @@deny('create,update,delete', true)
 }
 
 /// System-generated extraction results from the AI pipeline.

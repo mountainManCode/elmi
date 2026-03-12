@@ -25,6 +25,7 @@ import {
   IconRefresh,
   IconDeviceFloppy,
   IconRotate,
+  IconAlertTriangle,
 } from "@tabler/icons-react";
 import {
   approveDocument,
@@ -33,6 +34,7 @@ import {
   updateExtractionData,
 } from "../actions";
 import type { ExtractionData, LineItem } from "@/lib/validators/extraction";
+import type { FieldComparison } from "@/lib/validators/validation";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -42,6 +44,7 @@ type Props = {
   status: string;
   pdfUrl: string;
   extractionData: ExtractionData | null;
+  validationFields?: Record<string, FieldComparison> | null;
 };
 
 // ─── Confidence badge ─────────────────────────────────────────────────────────
@@ -81,6 +84,7 @@ function EditableFieldRow({
   isEdited,
   onEdit,
   format,
+  validation,
 }: {
   label: string;
   value: string | number | null;
@@ -88,6 +92,7 @@ function EditableFieldRow({
   isEdited: boolean;
   onEdit: (v: string | number | null) => void;
   format?: "currency" | "integer";
+  validation?: FieldComparison;
 }) {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState("");
@@ -183,13 +188,41 @@ function EditableFieldRow({
             {displayValue}
           </Text>
         </Box>
-        <Box style={{ flexShrink: 0 }}>
+        <Group gap={4} style={{ flexShrink: 0 }}>
+          {validation && !validation.agrees && !isEdited && (
+            <Tooltip
+              label={
+                <Box>
+                  <Text size="xs" fw={600} mb={2}>AI disagrees</Text>
+                  {validation.claudeValue && (
+                    <Text size="xs">Claude read: {validation.claudeValue}</Text>
+                  )}
+                  {validation.note && (
+                    <Text size="xs" c="dimmed" mt={2}>{validation.note}</Text>
+                  )}
+                </Box>
+              }
+              withArrow
+              multiline
+              w={220}
+            >
+              <Badge
+                size="xs"
+                color="yellow"
+                variant="light"
+                leftSection={<IconAlertTriangle size={9} />}
+                style={{ cursor: "default" }}
+              >
+                AI disagrees
+              </Badge>
+            </Tooltip>
+          )}
           {isEdited ? (
             <Badge size="xs" color="violet" variant="light">Edited</Badge>
           ) : (
             !isEmpty && <ConfidenceBadge confidence={confidence} />
           )}
-        </Box>
+        </Group>
       </Group>
     </Box>
   );
@@ -316,7 +349,7 @@ function LineItemCard({ item }: { item: LineItem }) {
 
 // ─── Main component ───────────────────────────────────────────────────────────
 
-export function VerificationView({ documentId, fileName, status, pdfUrl, extractionData }: Props) {
+export function VerificationView({ documentId, fileName, status, pdfUrl, extractionData, validationFields }: Props) {
   const [showPdf, setShowPdf] = useState(true);
   const [isPending, startTransition] = useTransition();
   const [currentStatus, setCurrentStatus] = useState(status);
@@ -328,7 +361,7 @@ export function VerificationView({ documentId, fileName, status, pdfUrl, extract
 
   const isApproved = currentStatus === "approved";
   const isRejected = currentStatus === "rejected";
-  const isProcessing = currentStatus === "pending" || currentStatus === "extracting";
+  const isProcessing = currentStatus === "pending" || currentStatus === "extracting" || currentStatus === "validating";
 
   // ── Field update helper ────────────────────────────────────────────────────
 
@@ -575,11 +608,12 @@ export function VerificationView({ documentId, fileName, status, pdfUrl, extract
               <Stack align="center" gap="sm" style={{ padding: "60px 0" }}>
                 <IconLoader size={32} color="var(--mantine-color-gray-4)" />
                 <Text c="dimmed" size="sm">
-                  Extraction in progress…
+                  {currentStatus === "validating" ? "AI validation in progress…" : "Extraction in progress…"}
                 </Text>
                 <Text c="dimmed" size="xs" ta="center">
-                  Refresh the page in a moment to see extracted fields.
-                  If it stays stuck, use the Retry button above.
+                  {currentStatus === "validating"
+                    ? "Claude is cross-checking the extraction. Refresh in a moment to see results."
+                    : "Refresh the page in a moment to see extracted fields. If it stays stuck, use the Retry button above."}
                 </Text>
               </Stack>
             )}
@@ -602,29 +636,29 @@ export function VerificationView({ documentId, fileName, status, pdfUrl, extract
                 )}
 
                 <FieldGroup title="Document">
-                  <EditableFieldRow label="Document Type" value={localData.documentType.value} confidence={localData.documentType.confidence} isEdited={editedFields.has("documentType")} onEdit={(v) => updateField("documentType", v)} />
-                  <EditableFieldRow label="Permit Number" value={localData.permitNumber.value} confidence={localData.permitNumber.confidence} isEdited={editedFields.has("permitNumber")} onEdit={(v) => updateField("permitNumber", v)} />
-                  <EditableFieldRow label="Account Number" value={localData.accountNumber.value} confidence={localData.accountNumber.confidence} isEdited={editedFields.has("accountNumber")} onEdit={(v) => updateField("accountNumber", v)} />
+                  <EditableFieldRow label="Document Type" value={localData.documentType.value} confidence={localData.documentType.confidence} isEdited={editedFields.has("documentType")} onEdit={(v) => updateField("documentType", v)} validation={validationFields?.["documentType"]} />
+                  <EditableFieldRow label="Permit Number" value={localData.permitNumber.value} confidence={localData.permitNumber.confidence} isEdited={editedFields.has("permitNumber")} onEdit={(v) => updateField("permitNumber", v)} validation={validationFields?.["permitNumber"]} />
+                  <EditableFieldRow label="Account Number" value={localData.accountNumber.value} confidence={localData.accountNumber.confidence} isEdited={editedFields.has("accountNumber")} onEdit={(v) => updateField("accountNumber", v)} validation={validationFields?.["accountNumber"]} />
                 </FieldGroup>
 
                 <Divider />
 
                 <FieldGroup title="Customer &amp; Location">
-                  <EditableFieldRow label="Customer Name" value={localData.customerName.value} confidence={localData.customerName.confidence} isEdited={editedFields.has("customerName")} onEdit={(v) => updateField("customerName", v)} />
-                  <EditableFieldRow label="Facility Name" value={localData.facilityName.value} confidence={localData.facilityName.confidence} isEdited={editedFields.has("facilityName")} onEdit={(v) => updateField("facilityName", v)} />
-                  <EditableFieldRow label="Service Address" value={localData.serviceAddress.value} confidence={localData.serviceAddress.confidence} isEdited={editedFields.has("serviceAddress")} onEdit={(v) => updateField("serviceAddress", v)} />
-                  <EditableFieldRow label="Mailing Address" value={localData.mailingAddress.value} confidence={localData.mailingAddress.confidence} isEdited={editedFields.has("mailingAddress")} onEdit={(v) => updateField("mailingAddress", v)} />
-                  <EditableFieldRow label="Issuing Authority" value={localData.issuingAuthority.value} confidence={localData.issuingAuthority.confidence} isEdited={editedFields.has("issuingAuthority")} onEdit={(v) => updateField("issuingAuthority", v)} />
+                  <EditableFieldRow label="Customer Name" value={localData.customerName.value} confidence={localData.customerName.confidence} isEdited={editedFields.has("customerName")} onEdit={(v) => updateField("customerName", v)} validation={validationFields?.["customerName"]} />
+                  <EditableFieldRow label="Facility Name" value={localData.facilityName.value} confidence={localData.facilityName.confidence} isEdited={editedFields.has("facilityName")} onEdit={(v) => updateField("facilityName", v)} validation={validationFields?.["facilityName"]} />
+                  <EditableFieldRow label="Service Address" value={localData.serviceAddress.value} confidence={localData.serviceAddress.confidence} isEdited={editedFields.has("serviceAddress")} onEdit={(v) => updateField("serviceAddress", v)} validation={validationFields?.["serviceAddress"]} />
+                  <EditableFieldRow label="Mailing Address" value={localData.mailingAddress.value} confidence={localData.mailingAddress.confidence} isEdited={editedFields.has("mailingAddress")} onEdit={(v) => updateField("mailingAddress", v)} validation={validationFields?.["mailingAddress"]} />
+                  <EditableFieldRow label="Issuing Authority" value={localData.issuingAuthority.value} confidence={localData.issuingAuthority.confidence} isEdited={editedFields.has("issuingAuthority")} onEdit={(v) => updateField("issuingAuthority", v)} validation={validationFields?.["issuingAuthority"]} />
                 </FieldGroup>
 
                 <Divider />
 
                 <FieldGroup title="Dates">
-                  <EditableFieldRow label="Issue Date" value={localData.issueDate.value} confidence={localData.issueDate.confidence} isEdited={editedFields.has("issueDate")} onEdit={(v) => updateField("issueDate", v)} />
-                  <EditableFieldRow label="Due Date" value={localData.dueDate.value} confidence={localData.dueDate.confidence} isEdited={editedFields.has("dueDate")} onEdit={(v) => updateField("dueDate", v)} />
-                  <EditableFieldRow label="Billing Period Start" value={localData.billingPeriodStart.value} confidence={localData.billingPeriodStart.confidence} isEdited={editedFields.has("billingPeriodStart")} onEdit={(v) => updateField("billingPeriodStart", v)} />
-                  <EditableFieldRow label="Billing Period End" value={localData.billingPeriodEnd.value} confidence={localData.billingPeriodEnd.confidence} isEdited={editedFields.has("billingPeriodEnd")} onEdit={(v) => updateField("billingPeriodEnd", v)} />
-                  <EditableFieldRow label="Billing Days" value={localData.billingDays.value} confidence={localData.billingDays.confidence} isEdited={editedFields.has("billingDays")} onEdit={(v) => updateField("billingDays", v)} format="integer" />
+                  <EditableFieldRow label="Issue Date" value={localData.issueDate.value} confidence={localData.issueDate.confidence} isEdited={editedFields.has("issueDate")} onEdit={(v) => updateField("issueDate", v)} validation={validationFields?.["issueDate"]} />
+                  <EditableFieldRow label="Due Date" value={localData.dueDate.value} confidence={localData.dueDate.confidence} isEdited={editedFields.has("dueDate")} onEdit={(v) => updateField("dueDate", v)} validation={validationFields?.["dueDate"]} />
+                  <EditableFieldRow label="Billing Period Start" value={localData.billingPeriodStart.value} confidence={localData.billingPeriodStart.confidence} isEdited={editedFields.has("billingPeriodStart")} onEdit={(v) => updateField("billingPeriodStart", v)} validation={validationFields?.["billingPeriodStart"]} />
+                  <EditableFieldRow label="Billing Period End" value={localData.billingPeriodEnd.value} confidence={localData.billingPeriodEnd.confidence} isEdited={editedFields.has("billingPeriodEnd")} onEdit={(v) => updateField("billingPeriodEnd", v)} validation={validationFields?.["billingPeriodEnd"]} />
+                  <EditableFieldRow label="Billing Days" value={localData.billingDays.value} confidence={localData.billingDays.confidence} isEdited={editedFields.has("billingDays")} onEdit={(v) => updateField("billingDays", v)} format="integer" validation={validationFields?.["billingDays"]} />
                 </FieldGroup>
 
                 <Divider />
@@ -648,11 +682,11 @@ export function VerificationView({ documentId, fileName, status, pdfUrl, extract
                 <Divider />
 
                 <FieldGroup title="Bill Totals">
-                  <EditableFieldRow label="Total Cost" value={localData.totalCost.value} confidence={localData.totalCost.confidence} isEdited={editedFields.has("totalCost")} onEdit={(v) => updateField("totalCost", v)} format="currency" />
-                  <EditableFieldRow label="Currency" value={localData.currency.value} confidence={localData.currency.confidence} isEdited={editedFields.has("currency")} onEdit={(v) => updateField("currency", v)} />
-                  <EditableFieldRow label="Previous Balance" value={localData.previousBalance.value} confidence={localData.previousBalance.confidence} isEdited={editedFields.has("previousBalance")} onEdit={(v) => updateField("previousBalance", v)} format="currency" />
-                  <EditableFieldRow label="Payments Received" value={localData.paymentsReceived.value} confidence={localData.paymentsReceived.confidence} isEdited={editedFields.has("paymentsReceived")} onEdit={(v) => updateField("paymentsReceived", v)} format="currency" />
-                  <EditableFieldRow label="Amount Due" value={localData.amountDue.value} confidence={localData.amountDue.confidence} isEdited={editedFields.has("amountDue")} onEdit={(v) => updateField("amountDue", v)} format="currency" />
+                  <EditableFieldRow label="Total Cost" value={localData.totalCost.value} confidence={localData.totalCost.confidence} isEdited={editedFields.has("totalCost")} onEdit={(v) => updateField("totalCost", v)} format="currency" validation={validationFields?.["totalCost"]} />
+                  <EditableFieldRow label="Currency" value={localData.currency.value} confidence={localData.currency.confidence} isEdited={editedFields.has("currency")} onEdit={(v) => updateField("currency", v)} validation={validationFields?.["currency"]} />
+                  <EditableFieldRow label="Previous Balance" value={localData.previousBalance.value} confidence={localData.previousBalance.confidence} isEdited={editedFields.has("previousBalance")} onEdit={(v) => updateField("previousBalance", v)} format="currency" validation={validationFields?.["previousBalance"]} />
+                  <EditableFieldRow label="Payments Received" value={localData.paymentsReceived.value} confidence={localData.paymentsReceived.confidence} isEdited={editedFields.has("paymentsReceived")} onEdit={(v) => updateField("paymentsReceived", v)} format="currency" validation={validationFields?.["paymentsReceived"]} />
+                  <EditableFieldRow label="Amount Due" value={localData.amountDue.value} confidence={localData.amountDue.confidence} isEdited={editedFields.has("amountDue")} onEdit={(v) => updateField("amountDue", v)} format="currency" validation={validationFields?.["amountDue"]} />
                 </FieldGroup>
 
                 {(localData.conditions.value.length > 0 || localData.emissionsLimits.value.length > 0) && (
@@ -668,7 +702,7 @@ export function VerificationView({ documentId, fileName, status, pdfUrl, extract
                 <Divider />
 
                 <FieldGroup title="Metadata">
-                  <EditableFieldRow label="Page Count" value={localData.pageCount.value} confidence={localData.pageCount.confidence} isEdited={editedFields.has("pageCount")} onEdit={(v) => updateField("pageCount", v)} format="integer" />
+                  <EditableFieldRow label="Page Count" value={localData.pageCount.value} confidence={localData.pageCount.confidence} isEdited={editedFields.has("pageCount")} onEdit={(v) => updateField("pageCount", v)} format="integer" validation={validationFields?.["pageCount"]} />
                   <FieldRow label="Extraction Notes" value={localData.extractionNotes.value} confidence={localData.extractionNotes.confidence} />
                 </FieldGroup>
               </Stack>
@@ -685,6 +719,7 @@ export function VerificationView({ documentId, fileName, status, pdfUrl, extract
 const STATUS_CONFIG: Record<string, { label: string; color: string }> = {
   pending: { label: "Pending", color: "gray" },
   extracting: { label: "Extracting", color: "blue" },
+  validating: { label: "Validating", color: "violet" },
   needs_review: { label: "Needs Review", color: "orange" },
   approved: { label: "Approved", color: "teal" },
   rejected: { label: "Rejected", color: "red" },
