@@ -21,6 +21,7 @@ import {
   IconLeaf,
   IconClipboardList,
   IconBuilding,
+  IconSettings,
 } from "@tabler/icons-react";
 import { authClient } from "@/lib/auth-client";
 
@@ -31,6 +32,7 @@ const NAV_ITEMS = [
   { label: "Verification", href: "/verification", icon: IconClipboardList },
   { label: "Suppliers", href: "/suppliers", icon: IconBuilding },
   { label: "Export", href: "/export", icon: IconFileExport },
+  { label: "Settings", href: "/settings", icon: IconSettings },
 ];
 
 export function ConsultantShell({

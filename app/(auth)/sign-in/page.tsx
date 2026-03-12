@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import {
   Anchor,
   Box,
@@ -26,6 +26,8 @@ type FormValues = {
 
 export default function SignInPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const redirectTo = searchParams.get("redirect") ?? "/dashboard";
   const [mode, setMode] = useState<"sign-in" | "sign-up">("sign-in");
   const [loading, setLoading] = useState(false);
 
@@ -73,7 +75,7 @@ export default function SignInPage() {
           return;
         }
       }
-      router.push("/dashboard");
+      router.push(redirectTo);
     } finally {
       setLoading(false);
     }

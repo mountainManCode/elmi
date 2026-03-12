@@ -20,7 +20,14 @@
       "Bash(grep -r \"TODO\\\\|FIXME\\\\|XXX\\\\|HACK\" /c/Users/agrif/SandBox/elmi --include=\"*.ts\" --include=\"*.tsx\" 2>/dev/null | head -30)",
       "Bash(grep -r \"DATABASE_URL\\\\|BETTER_AUTH\\\\|GOOGLE_CLOUD\\\\|GEMINI\\\\|INNGEST\" /c/Users/agrif/SandBox/elmi --include=\"*.ts\" --include=\"*.tsx\" 2>/dev/null | grep -v node_modules | wc -l)",
       "Bash(grep -r \"VERCEL\\\\|DEPLOYMENT\\\\|PROD\\\\|PRODUCTION\" /c/Users/agrif/SandBox/elmi --include=\"*.ts\" --include=\"*.tsx\" --include=\"*.json\" 2>/dev/null | grep -v node_modules | head -20)",
-      "Bash(npm run:*)"
+      "Bash(npm run:*)",
+      "Bash(grep -r \"inviteOrganizationMember\\\\|getOrganizationInvitations\\\\|cancelOrganizationInvitation\\\\|sendMagicLink\" /c/Users/agrif/SandBox/elmi --include=\"*.ts\" --include=\"*.tsx\" 2>/dev/null | head -20)",
+      "Bash(grep -r \"resend\\\\|sendEmail\\\\|email\" /c/Users/agrif/SandBox/elmi --include=\"*.ts\" --include=\"*.tsx\" 2>/dev/null | head -20)",
+      "Bash(grep -r \"auth.api\\\\.\" /c/Users/agrif/SandBox/elmi --include=\"*.ts\" --include=\"*.tsx\" 2>/dev/null | head -30)",
+      "Bash(grep -r \"members\\\\|invitations\" /c/Users/agrif/SandBox/elmi --include=\"*.ts\" --include=\"*.tsx\" 2>/dev/null | head -20)",
+      "Bash(ls -la /c/Users/agrif/SandBox/elmi/app/\\\\\\(consultant\\\\\\)/)",
+      "Bash(grep -r \"RESEND\\\\|SENDGRID\\\\|EMAIL\\\\|MAILGUN\" /c/Users/agrif/SandBox/elmi --include=\"*.ts\" --include=\"*.tsx\" --include=\".env*\" 2>/dev/null | grep -v node_modules)",
+      "Bash(grep -r \"listMembers\\\\|listInvitations\\\\|getActiveMember\\\\|cancelInvitation\\\\|removeMember\\\\|createInvitation\" node_modules/better-auth/dist --include=\"*.d.ts\" -l 2>/dev/null | head -5)"
     ]
   },
   "outputStyle": "Explanatory"

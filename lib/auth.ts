@@ -9,6 +9,7 @@ import { betterAuth } from "better-auth";
 import { zenstackAdapter } from "@zenstackhq/better-auth";
 import { organization, magicLink } from "better-auth/plugins";
 import { db } from "@/lib/db";
+import { sendMagicLinkEmail, sendInvitationEmail } from "@/lib/email";
 
 export const auth = betterAuth({
   database: zenstackAdapter(db, { provider: "postgresql" }),
@@ -18,11 +19,20 @@ export const auth = betterAuth({
     requireEmailVerification: false,
   },
   plugins: [
-    organization(),
+    organization({
+      sendInvitationEmail: async ({ invitation, inviter, organization }) => {
+        const inviteUrl = `${process.env.BETTER_AUTH_URL}/accept-invite?token=${invitation.id}`;
+        await sendInvitationEmail({
+          to: invitation.email,
+          inviterName: inviter.user.name,
+          orgName: organization.name,
+          inviteUrl,
+        });
+      },
+    }),
     magicLink({
       sendMagicLink: async ({ email, url }) => {
-        // TODO: wire up email provider (Resend / SendGrid)
-        console.log(`Magic link for ${email}: ${url}`);
+        await sendMagicLinkEmail({ to: email, url });
       },
     }),
   ],
