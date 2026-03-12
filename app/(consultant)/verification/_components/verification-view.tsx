@@ -50,22 +50,33 @@ function ConfidenceBadge({ confidence }: { confidence: number }) {
 
 // ─── Field row ────────────────────────────────────────────────────────────────
 
+function formatFieldValue(
+  value: string | number | string[] | null,
+  format?: "currency" | "integer"
+): string {
+  if (value === null || value === "") return "—";
+  if (Array.isArray(value)) return value.length === 0 ? "—" : value.join(", ");
+  if (typeof value === "number") {
+    if (format === "currency") return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(value);
+    if (format === "integer") return value.toLocaleString();
+    return value.toLocaleString();
+  }
+  return String(value);
+}
+
 function FieldRow({
   label,
   value,
   confidence,
+  format,
 }: {
   label: string;
   value: string | number | string[] | null;
   confidence: number;
+  format?: "currency" | "integer";
 }) {
   const isEmpty = value === null || value === "" || (Array.isArray(value) && value.length === 0);
-
-  const displayValue = isEmpty
-    ? "—"
-    : Array.isArray(value)
-      ? value.join(", ")
-      : String(value);
+  const displayValue = isEmpty ? "—" : formatFieldValue(value, format);
 
   return (
     <Box py={8} style={{ borderBottom: "1px solid var(--mantine-color-gray-1)" }}>
@@ -115,7 +126,9 @@ function LineItemCard({ item }: { item: LineItem }) {
       ? `${item.consumption}${item.consumptionUnit ? ` ${item.consumptionUnit}` : ""}`
       : null;
 
-  const costStr = item.cost !== null ? `$${item.cost.toFixed(2)}` : null;
+  const costStr = item.cost !== null
+    ? new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(item.cost)
+    : null;
 
   return (
     <Box
@@ -334,8 +347,8 @@ export function VerificationView({ documentId, fileName, status, pdfUrl, extract
         )}
 
         {/* Fields pane */}
-        <Box style={{ flex: showPdf ? 5 : 1, minWidth: 0, display: "flex", flexDirection: "column", height: "100%" }}>
-          <ScrollArea style={{ flex: 1, minHeight: 0 }} h="100%" px="md" py="md" type="always" scrollbarSize={6}>
+        <Box style={{ flex: showPdf ? 5 : 1, minWidth: 0, display: "flex", flexDirection: "column", overflow: "hidden" }}>
+          <ScrollArea style={{ flex: 1, height: 0 }} px="md" py="md" scrollbarSize={6}>
             {isProcessing && (
               <Stack align="center" gap="sm" style={{ padding: "60px 0" }}>
                 <IconLoader size={32} color="var(--mantine-color-gray-4)" />
@@ -382,7 +395,7 @@ export function VerificationView({ documentId, fileName, status, pdfUrl, extract
                   <FieldRow label="Due Date" value={extractionData.dueDate.value} confidence={extractionData.dueDate.confidence} />
                   <FieldRow label="Billing Period Start" value={extractionData.billingPeriodStart.value} confidence={extractionData.billingPeriodStart.confidence} />
                   <FieldRow label="Billing Period End" value={extractionData.billingPeriodEnd.value} confidence={extractionData.billingPeriodEnd.confidence} />
-                  <FieldRow label="Billing Days" value={extractionData.billingDays.value} confidence={extractionData.billingDays.confidence} />
+                  <FieldRow label="Billing Days" value={extractionData.billingDays.value} confidence={extractionData.billingDays.confidence} format="integer" />
                 </FieldGroup>
 
                 <Divider />
@@ -406,11 +419,11 @@ export function VerificationView({ documentId, fileName, status, pdfUrl, extract
                 <Divider />
 
                 <FieldGroup title="Bill Totals">
-                  <FieldRow label="Total Cost" value={extractionData.totalCost.value} confidence={extractionData.totalCost.confidence} />
+                  <FieldRow label="Total Cost" value={extractionData.totalCost.value} confidence={extractionData.totalCost.confidence} format="currency" />
                   <FieldRow label="Currency" value={extractionData.currency.value} confidence={extractionData.currency.confidence} />
-                  <FieldRow label="Previous Balance" value={extractionData.previousBalance.value} confidence={extractionData.previousBalance.confidence} />
-                  <FieldRow label="Payments Received" value={extractionData.paymentsReceived.value} confidence={extractionData.paymentsReceived.confidence} />
-                  <FieldRow label="Amount Due" value={extractionData.amountDue.value} confidence={extractionData.amountDue.confidence} />
+                  <FieldRow label="Previous Balance" value={extractionData.previousBalance.value} confidence={extractionData.previousBalance.confidence} format="currency" />
+                  <FieldRow label="Payments Received" value={extractionData.paymentsReceived.value} confidence={extractionData.paymentsReceived.confidence} format="currency" />
+                  <FieldRow label="Amount Due" value={extractionData.amountDue.value} confidence={extractionData.amountDue.confidence} format="currency" />
                 </FieldGroup>
 
                 {(extractionData.conditions.value.length > 0 || extractionData.emissionsLimits.value.length > 0) && (
@@ -426,7 +439,7 @@ export function VerificationView({ documentId, fileName, status, pdfUrl, extract
                 <Divider />
 
                 <FieldGroup title="Metadata">
-                  <FieldRow label="Page Count" value={extractionData.pageCount.value} confidence={extractionData.pageCount.confidence} />
+                  <FieldRow label="Page Count" value={extractionData.pageCount.value} confidence={extractionData.pageCount.confidence} format="integer" />
                   <FieldRow label="Extraction Notes" value={extractionData.extractionNotes.value} confidence={extractionData.extractionNotes.confidence} />
                 </FieldGroup>
               </Stack>
