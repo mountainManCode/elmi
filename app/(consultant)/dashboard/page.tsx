@@ -18,7 +18,7 @@ export default async function DashboardPage() {
   }
 
   // Flat parallel queries — no nested includes needed
-  const [projects, supplierLinks, documents] = await Promise.all([
+  const [projects, supplierLinks, documents, suppliers] = await Promise.all([
     db.project.findMany({
       where: { organizationId: org.id },
       orderBy: { createdAt: "desc" },
@@ -30,6 +30,10 @@ export default async function DashboardPage() {
     db.document.findMany({
       where: { organizationId: org.id },
       orderBy: { createdAt: "desc" },
+    }),
+    db.supplier.findMany({
+      where: { organizationId: org.id },
+      orderBy: { name: "asc" },
     }),
   ]);
 
@@ -70,6 +74,7 @@ export default async function DashboardPage() {
                   (l) => l.projectId === project.id
                 )}
                 documents={documents.filter((d) => d.projectId === project.id)}
+                suppliers={suppliers}
               />
             </GridCol>
           ))}

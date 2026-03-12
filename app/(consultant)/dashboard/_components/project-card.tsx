@@ -45,6 +45,7 @@ type SupplierLinkRow = {
   id: string;
   token: string;
   supplierId: string;
+  supplierModelId: string | null;
   projectId: string;
   expiresAt: Date;
   isActive: boolean;
@@ -61,10 +62,13 @@ type ProjectRow = {
   createdAt: Date;
 };
 
+type SupplierOption = { id: string; name: string };
+
 type Props = {
   project: ProjectRow;
   supplierLinks: SupplierLinkRow[];
   documents: DocumentRow[];
+  suppliers: SupplierOption[];
 };
 
 // ─── Status config ────────────────────────────────────────────────────────────
@@ -173,9 +177,11 @@ function DocStatusCell({ doc }: { doc: DocumentRow }) {
 function SupplierLinkRow({
   link,
   documents,
+  supplierName,
 }: {
   link: SupplierLinkRow;
   documents: DocumentRow[];
+  supplierName: string;
 }) {
   const expired = new Date() > link.expiresAt;
   const inactive = !link.isActive || expired;
@@ -195,7 +201,7 @@ function SupplierLinkRow({
     <Table.Tr>
       <Table.Td>
         <Text size="sm" fw={500}>
-          {link.supplierId}
+          {supplierName}
         </Text>
       </Table.Td>
       <Table.Td>
@@ -248,7 +254,7 @@ function SupplierLinkRow({
 
 // ─── Project Card ─────────────────────────────────────────────────────────────
 
-export function ProjectCard({ project, supplierLinks, documents }: Props) {
+export function ProjectCard({ project, supplierLinks, documents, suppliers }: Props) {
   const [linksOpen, { toggle }] = useDisclosure(false);
   const [modalOpen, { open: openModal, close: closeModal }] = useDisclosure(false);
 
@@ -371,15 +377,22 @@ export function ProjectCard({ project, supplierLinks, documents }: Props) {
                       </Table.Tr>
                     </Table.Thead>
                     <Table.Tbody>
-                      {supplierLinks.map((link) => (
-                        <SupplierLinkRow
-                          key={link.id}
-                          link={link}
-                          documents={documents.filter(
-                            (d) => d.supplierId === link.supplierId
-                          )}
-                        />
-                      ))}
+                      {supplierLinks.map((link) => {
+                        // Resolve supplier name: prefer model name, fallback to free-text supplierId
+                        const resolvedName = link.supplierModelId
+                          ? (suppliers.find((s) => s.id === link.supplierModelId)?.name ?? link.supplierId)
+                          : link.supplierId;
+                        return (
+                          <SupplierLinkRow
+                            key={link.id}
+                            link={link}
+                            supplierName={resolvedName}
+                            documents={documents.filter(
+                              (d) => d.supplierId === link.supplierId
+                            )}
+                          />
+                        );
+                      })}
                     </Table.Tbody>
                   </Table>
                   </ScrollArea>
@@ -399,6 +412,7 @@ export function ProjectCard({ project, supplierLinks, documents }: Props) {
       <CreateSupplierLinkModal
         projectId={project.id}
         projectName={project.name}
+        suppliers={suppliers}
         opened={modalOpen}
         onClose={closeModal}
       />

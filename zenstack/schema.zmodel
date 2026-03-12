@@ -135,6 +135,7 @@ model Organization {
   projects      Project[]
   documents     Document[]
   supplierLinks SupplierLink[]
+  suppliers     Supplier[]
 
   @@map('organization')
 
@@ -191,23 +192,46 @@ model Invitation {
 // DOMAIN MODELS
 // ---------------------------------------------------------------------------
 
+/// A named supplier that uploads documents for an organization.
+/// Consultants manage suppliers from the Suppliers page.
+/// SupplierLinks reference Suppliers via supplierModelId (optional for backward compat).
+model Supplier {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  name           String
+  email          String?
+  notes          String?
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @default(now()) @updatedAt
+  supplierLinks  SupplierLink[]
+
+  @@map('supplier')
+
+  @@allow('read', organization.members?[userId == auth().id])
+  @@allow('create,update', organization.members?[userId == auth().id && (role == 'owner' || role == 'admin')])
+  @@allow('delete', organization.members?[userId == auth().id && role == 'owner'])
+}
+
 /// A shareable, time-limited upload link for a specific supplier.
 /// Consultants generate these from the dashboard; suppliers open the link
 /// in a browser and upload PDFs without signing in.
 model SupplierLink {
-  id             String       @id @default(cuid())
-  token          String       @unique @default(cuid())
-  organizationId String
-  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  projectId      String
-  project        Project      @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  supplierId     String
-  expiresAt      DateTime
-  maxUploads     Int          @default(10)
-  uploadCount    Int          @default(0)
-  isActive       Boolean      @default(true)
-  createdAt      DateTime     @default(now())
-  updatedAt      DateTime     @default(now()) @updatedAt
+  id              String       @id @default(cuid())
+  token           String       @unique @default(cuid())
+  organizationId  String
+  organization    Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  projectId       String
+  project         Project      @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  supplierId      String                          // display name (legacy + used for Document matching)
+  supplierModelId String?                         // FK to Supplier — set for all new links
+  supplier        Supplier?    @relation(fields: [supplierModelId], references: [id])
+  expiresAt       DateTime
+  maxUploads      Int          @default(10)
+  uploadCount     Int          @default(0)
+  isActive        Boolean      @default(true)
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @default(now()) @updatedAt
 
   @@map('supplier_link')
 
