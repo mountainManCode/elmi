@@ -11,6 +11,7 @@ import {
   ScrollArea,
   Stack,
   Text,
+  TextInput,
   Tooltip,
 } from "@mantine/core";
 import { notifications } from "@mantine/notifications";
@@ -22,8 +23,15 @@ import {
   IconFileTypePdf,
   IconLoader,
   IconRefresh,
+  IconDeviceFloppy,
+  IconRotate,
 } from "@tabler/icons-react";
-import { approveDocument, rejectDocument, retryExtraction } from "../actions";
+import {
+  approveDocument,
+  rejectDocument,
+  retryExtraction,
+  updateExtractionData,
+} from "../actions";
 import type { ExtractionData, LineItem } from "@/lib/validators/extraction";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -48,7 +56,7 @@ function ConfidenceBadge({ confidence }: { confidence: number }) {
   );
 }
 
-// ─── Field row ────────────────────────────────────────────────────────────────
+// ─── Field value formatter ────────────────────────────────────────────────────
 
 function formatFieldValue(
   value: string | number | string[] | null,
@@ -63,6 +71,131 @@ function formatFieldValue(
   }
   return String(value);
 }
+
+// ─── Editable field row ───────────────────────────────────────────────────────
+
+function EditableFieldRow({
+  label,
+  value,
+  confidence,
+  isEdited,
+  onEdit,
+  format,
+}: {
+  label: string;
+  value: string | number | null;
+  confidence: number;
+  isEdited: boolean;
+  onEdit: (v: string | number | null) => void;
+  format?: "currency" | "integer";
+}) {
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState("");
+
+  const isEmpty = value === null || value === "";
+  const displayValue = isEmpty ? "—" : formatFieldValue(value, format);
+
+  const startEdit = () => {
+    setDraft(value === null ? "" : String(value));
+    setEditing(true);
+  };
+
+  const commitEdit = () => {
+    setEditing(false);
+    const trimmed = draft.trim();
+    if (trimmed === "") {
+      onEdit(null);
+    } else if (typeof value === "number" || format === "currency" || format === "integer") {
+      // Strip any currency formatting before parsing
+      const stripped = trimmed.replace(/[$,]/g, "");
+      const num = parseFloat(stripped);
+      onEdit(isNaN(num) ? null : num);
+    } else {
+      onEdit(trimmed);
+    }
+  };
+
+  if (editing) {
+    return (
+      <Box py={8} style={{ borderBottom: "1px solid var(--mantine-color-gray-1)" }}>
+        <Text
+          size="xs"
+          c="dimmed"
+          mb={4}
+          style={{ textTransform: "uppercase", letterSpacing: "0.06em", fontWeight: 600, fontSize: 10 }}
+        >
+          {label}
+        </Text>
+        <TextInput
+          value={draft}
+          onChange={(e) => setDraft(e.target.value)}
+          onBlur={commitEdit}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") e.currentTarget.blur();
+            if (e.key === "Escape") {
+              setEditing(false);
+            }
+          }}
+          size="xs"
+          autoFocus
+          rightSection={
+            <ActionIcon size="xs" variant="transparent" color="teal" onClick={commitEdit}>
+              <IconCheck size={12} />
+            </ActionIcon>
+          }
+        />
+      </Box>
+    );
+  }
+
+  return (
+    <Box
+      py={8}
+      style={{
+        borderBottom: "1px solid var(--mantine-color-gray-1)",
+        cursor: "text",
+        borderRadius: 2,
+        marginLeft: -4,
+        marginRight: -4,
+        paddingLeft: 4,
+        paddingRight: 4,
+        transition: "background 100ms ease",
+      }}
+      onClick={startEdit}
+      onMouseEnter={(e) => {
+        (e.currentTarget as HTMLElement).style.background = "var(--mantine-color-gray-0)";
+      }}
+      onMouseLeave={(e) => {
+        (e.currentTarget as HTMLElement).style.background = "transparent";
+      }}
+    >
+      <Group justify="space-between" align="flex-start" wrap="nowrap" gap="xs">
+        <Box style={{ flex: 1, minWidth: 0 }}>
+          <Text
+            size="xs"
+            c="dimmed"
+            mb={2}
+            style={{ textTransform: "uppercase", letterSpacing: "0.06em", fontWeight: 600, fontSize: 10 }}
+          >
+            {label}
+          </Text>
+          <Text size="sm" c={isEmpty ? "dimmed" : undefined} style={{ wordBreak: "break-word" }}>
+            {displayValue}
+          </Text>
+        </Box>
+        <Box style={{ flexShrink: 0 }}>
+          {isEdited ? (
+            <Badge size="xs" color="violet" variant="light">Edited</Badge>
+          ) : (
+            !isEmpty && <ConfidenceBadge confidence={confidence} />
+          )}
+        </Box>
+      </Group>
+    </Box>
+  );
+}
+
+// ─── Display-only field row (for arrays / non-editable) ───────────────────────
 
 function FieldRow({
   label,
@@ -188,12 +321,61 @@ export function VerificationView({ documentId, fileName, status, pdfUrl, extract
   const [isPending, startTransition] = useTransition();
   const [currentStatus, setCurrentStatus] = useState(status);
 
+  // Editable extraction data state
+  const [localData, setLocalData] = useState<ExtractionData | null>(extractionData);
+  const [editedFields, setEditedFields] = useState<Set<string>>(new Set());
+  const hasEdits = editedFields.size > 0;
+
   const isApproved = currentStatus === "approved";
   const isRejected = currentStatus === "rejected";
   const isProcessing = currentStatus === "pending" || currentStatus === "extracting";
 
+  // ── Field update helper ────────────────────────────────────────────────────
+
+  const updateField = (fieldName: string, newValue: string | number | null) => {
+    setLocalData((prev) => {
+      if (!prev) return prev;
+      const field = prev[fieldName as keyof ExtractionData] as { value: unknown; confidence: number };
+      return {
+        ...prev,
+        [fieldName]: { ...field, value: newValue },
+      };
+    });
+    setEditedFields((prev) => new Set([...prev, fieldName]));
+  };
+
+  // ── Action handlers ────────────────────────────────────────────────────────
+
+  const handleSave = () => {
+    if (!localData) return;
+    startTransition(async () => {
+      const result = await updateExtractionData(documentId, localData);
+      if (result.success) {
+        setEditedFields(new Set());
+        notifications.show({
+          title: "Saved",
+          message: "Field edits saved successfully.",
+          color: "teal",
+          icon: <IconCheck size={16} />,
+        });
+      } else {
+        notifications.show({ title: "Error", message: result.error, color: "red" });
+      }
+    });
+  };
+
+  const handleDiscard = () => {
+    setLocalData(extractionData);
+    setEditedFields(new Set());
+  };
+
   const handleApprove = () => {
     startTransition(async () => {
+      // Auto-save any edits before approving
+      if (hasEdits && localData) {
+        await updateExtractionData(documentId, localData);
+        setEditedFields(new Set());
+      }
       const result = await approveDocument(documentId);
       if (result.success) {
         setCurrentStatus("approved");
@@ -269,6 +451,35 @@ export function VerificationView({ documentId, fileName, status, pdfUrl, extract
               </ActionIcon>
             </Tooltip>
 
+            {/* Unsaved edits indicator */}
+            {hasEdits && (
+              <Group gap={6}>
+                <Tooltip label="Discard all edits" withArrow>
+                  <Button
+                    size="xs"
+                    variant="subtle"
+                    color="gray"
+                    leftSection={<IconRotate size={12} />}
+                    onClick={handleDiscard}
+                    disabled={isPending}
+                  >
+                    Discard
+                  </Button>
+                </Tooltip>
+                <Button
+                  size="xs"
+                  variant="light"
+                  color="violet"
+                  leftSection={<IconDeviceFloppy size={12} />}
+                  onClick={handleSave}
+                  loading={isPending}
+                  disabled={isPending}
+                >
+                  Save {editedFields.size} edit{editedFields.size !== 1 ? "s" : ""}
+                </Button>
+              </Group>
+            )}
+
             {isProcessing && (
               <Tooltip label="Restart extraction pipeline" withArrow>
                 <Button
@@ -306,20 +517,31 @@ export function VerificationView({ documentId, fileName, status, pdfUrl, extract
                   loading={isPending}
                   disabled={isPending}
                 >
-                  Approve
+                  {hasEdits ? "Save & Approve" : "Approve"}
                 </Button>
               </>
             )}
 
             {isApproved && (
-              <Badge color="teal" variant="light" size="sm">
-                Approved
-              </Badge>
+              <>
+                {hasEdits && (
+                  <Button
+                    size="xs"
+                    variant="light"
+                    color="violet"
+                    leftSection={<IconDeviceFloppy size={12} />}
+                    onClick={handleSave}
+                    loading={isPending}
+                    disabled={isPending}
+                  >
+                    Save {editedFields.size} edit{editedFields.size !== 1 ? "s" : ""}
+                  </Button>
+                )}
+                <Badge color="teal" variant="light" size="sm">Approved</Badge>
+              </>
             )}
             {isRejected && (
-              <Badge color="red" variant="light" size="sm">
-                Rejected
-              </Badge>
+              <Badge color="red" variant="light" size="sm">Rejected</Badge>
             )}
           </Group>
         </Group>
@@ -362,7 +584,7 @@ export function VerificationView({ documentId, fileName, status, pdfUrl, extract
               </Stack>
             )}
 
-            {!isProcessing && !extractionData && (
+            {!isProcessing && !localData && (
               <Stack align="center" gap="sm" style={{ padding: "60px 0" }}>
                 <Text c="dimmed" size="sm">
                   No extraction data available.
@@ -370,68 +592,75 @@ export function VerificationView({ documentId, fileName, status, pdfUrl, extract
               </Stack>
             )}
 
-            {extractionData && (
+            {localData && (
               <Stack gap="xl">
+                {/* Edit hint */}
+                {!isProcessing && (
+                  <Text size="xs" c="dimmed" style={{ fontStyle: "italic" }}>
+                    Click any field to edit its value.
+                  </Text>
+                )}
+
                 <FieldGroup title="Document">
-                  <FieldRow label="Document Type" value={extractionData.documentType.value} confidence={extractionData.documentType.confidence} />
-                  <FieldRow label="Permit Number" value={extractionData.permitNumber.value} confidence={extractionData.permitNumber.confidence} />
-                  <FieldRow label="Account Number" value={extractionData.accountNumber.value} confidence={extractionData.accountNumber.confidence} />
+                  <EditableFieldRow label="Document Type" value={localData.documentType.value} confidence={localData.documentType.confidence} isEdited={editedFields.has("documentType")} onEdit={(v) => updateField("documentType", v)} />
+                  <EditableFieldRow label="Permit Number" value={localData.permitNumber.value} confidence={localData.permitNumber.confidence} isEdited={editedFields.has("permitNumber")} onEdit={(v) => updateField("permitNumber", v)} />
+                  <EditableFieldRow label="Account Number" value={localData.accountNumber.value} confidence={localData.accountNumber.confidence} isEdited={editedFields.has("accountNumber")} onEdit={(v) => updateField("accountNumber", v)} />
                 </FieldGroup>
 
                 <Divider />
 
                 <FieldGroup title="Customer &amp; Location">
-                  <FieldRow label="Customer Name" value={extractionData.customerName.value} confidence={extractionData.customerName.confidence} />
-                  <FieldRow label="Facility Name" value={extractionData.facilityName.value} confidence={extractionData.facilityName.confidence} />
-                  <FieldRow label="Service Address" value={extractionData.serviceAddress.value} confidence={extractionData.serviceAddress.confidence} />
-                  <FieldRow label="Mailing Address" value={extractionData.mailingAddress.value} confidence={extractionData.mailingAddress.confidence} />
-                  <FieldRow label="Issuing Authority" value={extractionData.issuingAuthority.value} confidence={extractionData.issuingAuthority.confidence} />
+                  <EditableFieldRow label="Customer Name" value={localData.customerName.value} confidence={localData.customerName.confidence} isEdited={editedFields.has("customerName")} onEdit={(v) => updateField("customerName", v)} />
+                  <EditableFieldRow label="Facility Name" value={localData.facilityName.value} confidence={localData.facilityName.confidence} isEdited={editedFields.has("facilityName")} onEdit={(v) => updateField("facilityName", v)} />
+                  <EditableFieldRow label="Service Address" value={localData.serviceAddress.value} confidence={localData.serviceAddress.confidence} isEdited={editedFields.has("serviceAddress")} onEdit={(v) => updateField("serviceAddress", v)} />
+                  <EditableFieldRow label="Mailing Address" value={localData.mailingAddress.value} confidence={localData.mailingAddress.confidence} isEdited={editedFields.has("mailingAddress")} onEdit={(v) => updateField("mailingAddress", v)} />
+                  <EditableFieldRow label="Issuing Authority" value={localData.issuingAuthority.value} confidence={localData.issuingAuthority.confidence} isEdited={editedFields.has("issuingAuthority")} onEdit={(v) => updateField("issuingAuthority", v)} />
                 </FieldGroup>
 
                 <Divider />
 
                 <FieldGroup title="Dates">
-                  <FieldRow label="Issue Date" value={extractionData.issueDate.value} confidence={extractionData.issueDate.confidence} />
-                  <FieldRow label="Due Date" value={extractionData.dueDate.value} confidence={extractionData.dueDate.confidence} />
-                  <FieldRow label="Billing Period Start" value={extractionData.billingPeriodStart.value} confidence={extractionData.billingPeriodStart.confidence} />
-                  <FieldRow label="Billing Period End" value={extractionData.billingPeriodEnd.value} confidence={extractionData.billingPeriodEnd.confidence} />
-                  <FieldRow label="Billing Days" value={extractionData.billingDays.value} confidence={extractionData.billingDays.confidence} format="integer" />
+                  <EditableFieldRow label="Issue Date" value={localData.issueDate.value} confidence={localData.issueDate.confidence} isEdited={editedFields.has("issueDate")} onEdit={(v) => updateField("issueDate", v)} />
+                  <EditableFieldRow label="Due Date" value={localData.dueDate.value} confidence={localData.dueDate.confidence} isEdited={editedFields.has("dueDate")} onEdit={(v) => updateField("dueDate", v)} />
+                  <EditableFieldRow label="Billing Period Start" value={localData.billingPeriodStart.value} confidence={localData.billingPeriodStart.confidence} isEdited={editedFields.has("billingPeriodStart")} onEdit={(v) => updateField("billingPeriodStart", v)} />
+                  <EditableFieldRow label="Billing Period End" value={localData.billingPeriodEnd.value} confidence={localData.billingPeriodEnd.confidence} isEdited={editedFields.has("billingPeriodEnd")} onEdit={(v) => updateField("billingPeriodEnd", v)} />
+                  <EditableFieldRow label="Billing Days" value={localData.billingDays.value} confidence={localData.billingDays.confidence} isEdited={editedFields.has("billingDays")} onEdit={(v) => updateField("billingDays", v)} format="integer" />
                 </FieldGroup>
 
                 <Divider />
 
-                {/* Line items — one card per utility service */}
-                <FieldGroup title={`Utility Services (${extractionData.lineItems.value.length})`}>
-                  {extractionData.lineItems.value.length === 0 ? (
+                {/* Line items — display-only (complex structure, skip inline editing) */}
+                <FieldGroup title={`Utility Services (${localData.lineItems.value.length})`}>
+                  {localData.lineItems.value.length === 0 ? (
                     <Text size="xs" c="dimmed" py={8}>No line items extracted.</Text>
                   ) : (
                     <Stack gap="xs" mt={4}>
-                      {extractionData.lineItems.value.map((item: LineItem, i: number) => (
+                      {localData.lineItems.value.map((item: LineItem, i: number) => (
                         <LineItemCard key={i} item={item} />
                       ))}
                     </Stack>
                   )}
                   <Box mt={4}>
-                    <ConfidenceBadge confidence={extractionData.lineItems.confidence} />
+                    <ConfidenceBadge confidence={localData.lineItems.confidence} />
                   </Box>
                 </FieldGroup>
 
                 <Divider />
 
                 <FieldGroup title="Bill Totals">
-                  <FieldRow label="Total Cost" value={extractionData.totalCost.value} confidence={extractionData.totalCost.confidence} format="currency" />
-                  <FieldRow label="Currency" value={extractionData.currency.value} confidence={extractionData.currency.confidence} />
-                  <FieldRow label="Previous Balance" value={extractionData.previousBalance.value} confidence={extractionData.previousBalance.confidence} format="currency" />
-                  <FieldRow label="Payments Received" value={extractionData.paymentsReceived.value} confidence={extractionData.paymentsReceived.confidence} format="currency" />
-                  <FieldRow label="Amount Due" value={extractionData.amountDue.value} confidence={extractionData.amountDue.confidence} format="currency" />
+                  <EditableFieldRow label="Total Cost" value={localData.totalCost.value} confidence={localData.totalCost.confidence} isEdited={editedFields.has("totalCost")} onEdit={(v) => updateField("totalCost", v)} format="currency" />
+                  <EditableFieldRow label="Currency" value={localData.currency.value} confidence={localData.currency.confidence} isEdited={editedFields.has("currency")} onEdit={(v) => updateField("currency", v)} />
+                  <EditableFieldRow label="Previous Balance" value={localData.previousBalance.value} confidence={localData.previousBalance.confidence} isEdited={editedFields.has("previousBalance")} onEdit={(v) => updateField("previousBalance", v)} format="currency" />
+                  <EditableFieldRow label="Payments Received" value={localData.paymentsReceived.value} confidence={localData.paymentsReceived.confidence} isEdited={editedFields.has("paymentsReceived")} onEdit={(v) => updateField("paymentsReceived", v)} format="currency" />
+                  <EditableFieldRow label="Amount Due" value={localData.amountDue.value} confidence={localData.amountDue.confidence} isEdited={editedFields.has("amountDue")} onEdit={(v) => updateField("amountDue", v)} format="currency" />
                 </FieldGroup>
 
-                {(extractionData.conditions.value.length > 0 || extractionData.emissionsLimits.value.length > 0) && (
+                {(localData.conditions.value.length > 0 || localData.emissionsLimits.value.length > 0) && (
                   <>
                     <Divider />
                     <FieldGroup title="Regulatory">
-                      <FieldRow label="Conditions" value={extractionData.conditions.value} confidence={extractionData.conditions.confidence} />
-                      <FieldRow label="Emissions Limits" value={extractionData.emissionsLimits.value} confidence={extractionData.emissionsLimits.confidence} />
+                      <FieldRow label="Conditions" value={localData.conditions.value} confidence={localData.conditions.confidence} />
+                      <FieldRow label="Emissions Limits" value={localData.emissionsLimits.value} confidence={localData.emissionsLimits.confidence} />
                     </FieldGroup>
                   </>
                 )}
@@ -439,8 +668,8 @@ export function VerificationView({ documentId, fileName, status, pdfUrl, extract
                 <Divider />
 
                 <FieldGroup title="Metadata">
-                  <FieldRow label="Page Count" value={extractionData.pageCount.value} confidence={extractionData.pageCount.confidence} format="integer" />
-                  <FieldRow label="Extraction Notes" value={extractionData.extractionNotes.value} confidence={extractionData.extractionNotes.confidence} />
+                  <EditableFieldRow label="Page Count" value={localData.pageCount.value} confidence={localData.pageCount.confidence} isEdited={editedFields.has("pageCount")} onEdit={(v) => updateField("pageCount", v)} format="integer" />
+                  <FieldRow label="Extraction Notes" value={localData.extractionNotes.value} confidence={localData.extractionNotes.confidence} />
                 </FieldGroup>
               </Stack>
             )}

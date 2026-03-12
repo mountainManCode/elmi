@@ -16,7 +16,11 @@
       "Bash(ls:*)",
       "Bash(cat:*)",
       "Bash(mv:*)",
-      "Bash(find:*)"
+      "Bash(find:*)",
+      "Bash(grep -r \"TODO\\\\|FIXME\\\\|XXX\\\\|HACK\" /c/Users/agrif/SandBox/elmi --include=\"*.ts\" --include=\"*.tsx\" 2>/dev/null | head -30)",
+      "Bash(grep -r \"DATABASE_URL\\\\|BETTER_AUTH\\\\|GOOGLE_CLOUD\\\\|GEMINI\\\\|INNGEST\" /c/Users/agrif/SandBox/elmi --include=\"*.ts\" --include=\"*.tsx\" 2>/dev/null | grep -v node_modules | wc -l)",
+      "Bash(grep -r \"VERCEL\\\\|DEPLOYMENT\\\\|PROD\\\\|PRODUCTION\" /c/Users/agrif/SandBox/elmi --include=\"*.ts\" --include=\"*.tsx\" --include=\"*.json\" 2>/dev/null | grep -v node_modules | head -20)",
+      "Bash(npm run:*)"
     ]
   },
   "outputStyle": "Explanatory"

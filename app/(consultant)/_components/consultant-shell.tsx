@@ -19,6 +19,7 @@ import {
   IconFileExport,
   IconLogout,
   IconLeaf,
+  IconClipboardList,
 } from "@tabler/icons-react";
 import { authClient } from "@/lib/auth-client";
 
@@ -26,7 +27,7 @@ type User = { name: string | null; email: string };
 
 const NAV_ITEMS = [
   { label: "Dashboard", href: "/dashboard", icon: IconLayoutDashboard },
-  // { label: "Verification", href: "/verification", icon: IconCircleCheck },
+  { label: "Verification", href: "/verification", icon: IconClipboardList },
   { label: "Export", href: "/export", icon: IconFileExport },
 ];
 

@@ -1,12 +1,13 @@
 // Verification Workspace — Server Component
-// Split-screen: signed PDF URL on the left, extracted data fields on the right.
+// No documentId → shows document review queue.
+// With documentId → shows split-screen PDF + extraction review.
 
-import { notFound } from "next/navigation";
-import { Box, Text } from "@mantine/core";
+import { notFound, redirect } from "next/navigation";
 import { getUserDb } from "@/lib/db";
 import { getSignedReadUrl } from "@/lib/gcs";
 import { extractionSchema } from "@/lib/validators/extraction";
 import { VerificationView } from "./_components/verification-view";
+import { DocumentQueue } from "./_components/document-queue";
 
 type Props = {
   searchParams: Promise<{ documentId?: string }>;
@@ -14,18 +15,30 @@ type Props = {
 
 export default async function VerificationPage({ searchParams }: Props) {
   const { documentId } = await searchParams;
+  const db = await getUserDb();
+
+  const org = await db.organization.findFirst();
+  if (!org) redirect("/dashboard");
+
+  // ── No documentId: show the review queue ──────────────────────────────────
 
   if (!documentId) {
-    return (
-      <Box style={{ padding: "80px 24px", textAlign: "center" }}>
-        <Text c="dimmed" size="sm">
-          Select a document from the dashboard to review.
-        </Text>
-      </Box>
-    );
+    const [documents, projects] = await Promise.all([
+      db.document.findMany({
+        where: { organizationId: org.id },
+        orderBy: { createdAt: "desc" },
+      }),
+      db.project.findMany({
+        where: { organizationId: org.id },
+      }),
+    ]);
+
+    const projectMap = Object.fromEntries(projects.map((p) => [p.id, p.name]));
+
+    return <DocumentQueue documents={documents} projectMap={projectMap} />;
   }
 
-  const db = await getUserDb();
+  // ── documentId provided: show verification workspace ─────────────────────
 
   const document = await db.document.findFirst({
     where: { id: documentId },
