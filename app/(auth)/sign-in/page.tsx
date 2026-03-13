@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
   Anchor,
@@ -24,7 +24,8 @@ type FormValues = {
   password: string;
 };
 
-export default function SignInPage() {
+// Inner component that reads search params — must be inside Suspense
+function SignInForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const redirectTo = searchParams.get("redirect") ?? "/dashboard";
@@ -155,5 +156,13 @@ export default function SignInPage() {
         </Stack>
       </Card>
     </Center>
+  );
+}
+
+export default function SignInPage() {
+  return (
+    <Suspense>
+      <SignInForm />
+    </Suspense>
   );
 }
