@@ -31,7 +31,9 @@
       "Bash(grep -r \"validation\\\\|validate\" C:/Users/agrif/SandBox/elmi/app C:/Users/agrif/SandBox/elmi/lib --include=\"*.ts\" --include=\"*.tsx\" 2>/dev/null | head -30)",
       "Bash(grep -r \"vercel\\\\.json\\\\|.vercelignore\\\\|deployment\\\\|build.*output\" \"C:\\\\Users\\\\agrif\\\\SandBox\\\\elmi\" --include=\"*.json\" --exclude-dir=node_modules 2>/dev/null | head -20)",
       "Bash(cd C:/Users/agrif/SandBox/elmi && cat package.json | python -c \"import sys,json; d=json.load\\(sys.stdin\\); print\\(json.dumps\\(d.get\\('scripts',{}\\), indent=2\\)\\)\")",
-      "Bash(cd C:/Users/agrif/SandBox/elmi && npm list @sentry/nextjs 2>&1 | head -5)"
+      "Bash(cd C:/Users/agrif/SandBox/elmi && npm list @sentry/nextjs 2>&1 | head -5)",
+      "Bash(gh api:*)",
+      "WebFetch(domain:raw.githubusercontent.com)"
     ]
   },
   "outputStyle": "Explanatory"

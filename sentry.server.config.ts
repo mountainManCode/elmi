@@ -1,6 +1,7 @@
 import * as Sentry from "@sentry/nextjs";
 
-const dsn = process.env.NEXT_PUBLIC_SENTRY_DSN;
+// Prefer the private server-side DSN; fall back to the public one
+const dsn = process.env.SENTRY_DSN ?? process.env.NEXT_PUBLIC_SENTRY_DSN;
 
 if (dsn) {
   Sentry.init({
