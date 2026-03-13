@@ -5,7 +5,7 @@
   "scripts": {
     "dev": "next dev",
     "dev:inngest": "npx inngest-cli@latest dev",
-    "build": "next build",
+    "build": "zenstack generate && next build",
     "start": "next start",
     "lint": "eslint"
   },
